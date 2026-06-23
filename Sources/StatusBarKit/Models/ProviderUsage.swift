@@ -32,10 +32,18 @@ public struct ProviderUsage: Sendable, Equatable {
     public let windows: [UsageWindow]
     public let status: ProviderStatus
     public let lastUpdated: Date
+    public let today: TodayUsage?
     public init(providerId: ProviderID, displayName: String, planLabel: String?,
-                windows: [UsageWindow], status: ProviderStatus, lastUpdated: Date) {
+                windows: [UsageWindow], status: ProviderStatus, lastUpdated: Date,
+                today: TodayUsage? = nil) {
         self.providerId = providerId; self.displayName = displayName; self.planLabel = planLabel
         self.windows = windows; self.status = status; self.lastUpdated = lastUpdated
+        self.today = today
+    }
+
+    public func with(today: TodayUsage?) -> ProviderUsage {
+        ProviderUsage(providerId: providerId, displayName: displayName, planLabel: planLabel,
+                      windows: windows, status: status, lastUpdated: lastUpdated, today: today)
     }
 
     public var nearestLimitFraction: Double { windows.map(\.usedFraction).max() ?? 0 }
