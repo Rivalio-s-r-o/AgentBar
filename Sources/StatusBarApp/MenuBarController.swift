@@ -16,7 +16,10 @@ final class MenuBarController {
         self.onRefresh = onClick
         render(store.orderedUsages)
         cancellable = store.objectWillChange.sink { [weak self] _ in
-            DispatchQueue.main.async { self?.render(self?.store.orderedUsages ?? []) }
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.render(self.store.orderedUsages)
+            }
         }
         popover.behavior = .transient
         popover.contentSize = NSSize(width: 320, height: 240)
