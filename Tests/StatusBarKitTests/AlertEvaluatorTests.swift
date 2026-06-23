@@ -59,3 +59,19 @@ private func usage(_ id: ProviderID, _ name: String, _ status: ProviderStatus, _
     #expect(fire.count == 1)
     #expect(state == [AlertKey(providerId: .claudeCode, window: .rolling5h)])
 }
+
+@Test func overagePřesStoProcentSeKlampujeNaNulu() {
+    let u = [usage(.codex, "Codex", .ok, [1.2])]   // used 120 % → remaining max(0, 100-120) = 0 ≤ 10 → fire
+    let (fire, _) = AlertEvaluator.evaluate(usages: u, thresholdPercent: 10, alreadyAlerted: [])
+    #expect(fire.count == 1)
+    #expect(fire[0].remainingPercent == 0)
+}
+
+@Test func degradedNepřežijeKlíčVeStavu() {
+    // spec §4: klíč upozorněný v .ok nesmí přežít přechod na degraded (newState se počítá jen z .ok)
+    let key = AlertKey(providerId: .claudeCode, window: .rolling5h)
+    let u = [usage(.claudeCode, "Claude Code", .degraded("stará"), [0.99])]
+    let (fire, state) = AlertEvaluator.evaluate(usages: u, thresholdPercent: 10, alreadyAlerted: [key])
+    #expect(fire.isEmpty)
+    #expect(state.isEmpty)   // starý klíč odbit (rearm), žádné upozornění ze zastaralých dat
+}
