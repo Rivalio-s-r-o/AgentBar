@@ -6,10 +6,18 @@ struct PopoverView: View {
     let onRefresh: () -> Void
     let onQuit: () -> Void
 
+    private var dnesCelkem: Decimal {
+        store.orderedUsages.compactMap { $0.today?.estimatedCost }.reduce(Decimal(0), +)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Spotřeba").font(.headline); Spacer()
+                Text("Spotřeba").font(.headline)
+                Spacer()
+                if dnesCelkem > 0 {
+                    Text("Dnes ≈ \(TokenFormatter.money(dnesCelkem))").font(.caption).foregroundStyle(.secondary)
+                }
                 Button(action: onRefresh) { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
             }.padding(.horizontal, 14).padding(.vertical, 10)
             Divider()
@@ -36,10 +44,27 @@ private struct ProviderCard: View {
             }
             switch usage.status {
             case .unavailable(let m): Text(m).font(.caption).foregroundStyle(.secondary)
-            case .degraded(let m): Text(m).font(.caption2).foregroundStyle(.orange); windowsList
-            case .ok: windowsList
+            case .degraded(let m): Text(m).font(.caption2).foregroundStyle(.orange); windowsList; todayRow
+            case .ok: windowsList; todayRow
             }
         }.padding(.horizontal, 14).padding(.vertical, 11)
+    }
+
+    @ViewBuilder private var todayRow: some View {
+        if let today = usage.today {
+            Divider().padding(.vertical, 2)
+            HStack {
+                Text("Dnes").font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(TokenFormatter.compact(today.total.totalTokens)) tok. ≈ \(TokenFormatter.money(today.estimatedCost))")
+                    .font(.caption).fontWeight(.medium)
+            }
+            if usage.providerId == .claudeCode, today.perModel.count > 1 {
+                Text(today.perModel.map { "\(TokenFormatter.modelShortName($0.modelName)) \(TokenFormatter.compact($0.tokens.totalTokens))" }
+                        .joined(separator: " · "))
+                    .font(.caption2).foregroundStyle(.tertiary)
+            }
+        }
     }
     private var windowsList: some View {
         ForEach(Array(usage.windows.enumerated()), id: \.offset) { _, w in
