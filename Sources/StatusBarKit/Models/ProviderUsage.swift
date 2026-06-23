@@ -5,7 +5,7 @@ public enum ProviderID: String, Sendable, CaseIterable {
     case codex
 }
 
-public enum WindowKind: Sendable, Equatable {
+public enum WindowKind: Sendable, Hashable {
     case rolling5h
     case weekly(scope: String?)
 }
