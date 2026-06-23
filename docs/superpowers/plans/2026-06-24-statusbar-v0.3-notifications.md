@@ -145,7 +145,7 @@ private func usage(_ id: ProviderID, _ name: String, _ status: ProviderStatus, _
 }
 
 @Test func víceOkenNezávisle() {
-    var u = ProviderUsage(providerId: .claudeCode, displayName: "Claude Code", planLabel: nil,
+    let u = ProviderUsage(providerId: .claudeCode, displayName: "Claude Code", planLabel: nil,
         windows: [
             UsageWindow(kind: .rolling5h, usedFraction: 0.95, resetAt: nil),         // remaining 5 ≤ 10 → fire
             UsageWindow(kind: .weekly(scope: nil), usedFraction: 0.40, resetAt: nil) // remaining 60 → ne
@@ -153,7 +153,6 @@ private func usage(_ id: ProviderID, _ name: String, _ status: ProviderStatus, _
     let (fire, state) = AlertEvaluator.evaluate(usages: [u], thresholdPercent: 10, alreadyAlerted: [])
     #expect(fire.count == 1)
     #expect(state == [AlertKey(providerId: .claudeCode, window: .rolling5h)])
-    _ = u
 }
 ```
 
@@ -352,15 +351,16 @@ final class NotificationService {
     // nikdy ne při startu appky a nikdy v testech.
     private lazy var center = UNUserNotificationCenter.current()
 
+    // POZN. (F4): NEvnořovat getNotificationSettings { … center … } — jeho @Sendable completion
+    // běží mimo main actor a sáhnutí na @MainActor `center` by pod Swift 6 neprošlo kompilací.
+    // requestAuthorization už-rozhodnuté NEpromptuje znovu, takže ho lze volat přímo.
     func requestAuthorizationIfNeeded() {
-        center.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .notDetermined else { return }
-            self.center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
-        }
+        guard Bundle.main.bundleIdentifier != nil else { return }   // bez bundlu (raw binár) notifikace neexistují
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     func post(_ events: [AlertEvent]) {
-        guard !events.isEmpty else { return }
+        guard Bundle.main.bundleIdentifier != nil, !events.isEmpty else { return }
         for e in events {
             let content = UNMutableNotificationContent()
             content.title = "\(e.providerDisplayName) — \(e.windowLabel)"
@@ -596,6 +596,56 @@ git commit -m "feat: popover přepínač upozornění + výběr prahu + verze 0.
 **On failure:** kterýkoli `old_string` nesedí → přečti reálný soubor a aplikuj princip. ZASTAV, neimprovizuj.
 
 ---
+
+---
+
+## Assumptions (plan-forge AUDIT, 2026-06-24)
+
+| # | Předpoklad | Status | Ověřeno jak |
+|---|------------|--------|-------------|
+| A1 | `WindowKind` má associated value → potřebuje explicitní `Hashable`; `ProviderID` (raw-`String` enum bez asociovaných hodnot) je už `Hashable` | **verified** | přečten `ProviderUsage.swift` |
+| A2 | Edit-kotvy (`RefreshCoordinator`, `AppDelegate`, `MenuBarController`, `PopoverView`, `Info.plist`) sedí s reálnými soubory | **verified** | všechny soubory přečteny v Phase 1; `old_string` bloky zkopírovány verbatim |
+| A3 | App bundle má `CFBundleIdentifier` (`cz.rivalio.statusbar`) → `UNUserNotificationCenter.current()` v bundlu nespadne | **verified** | přečten `Resources/Info.plist` |
+| A4 | `swift test` nekompiluje app target → `NotificationService`/`UserNotifications` nikdy neovlivní testy ani nespustí `.current()` | **verified** | test target závisí jen na `StatusBarKit` (`Package.swift`) |
+| A5 | `requestAuthorization` už-rozhodnuté NEpromptuje znovu (lze volat opakovaně bez re-dialogu) | **accepted** (Apple chování) | dokumentace UserNotifications |
+| A6 | **Doručení notifikace** funguje pro ad-hoc podepsanou app spuštěnou z projektu | **UNVERIFIABLE autonomně** (R1) | vyžaduje povolení uživatele + vizuál; jádro plně testované, default-off |
+
+## Considered Alternatives
+
+- **Kde vyhodnocovat alerty:** A) callback `RefreshCoordinator.onRefreshed` po `replaceAll` *(vybráno — deterministické, `StatusBarKit` zůstává čistý bez závislosti na notifikacích)*; B) `AppDelegate` pozoruje `store.objectWillChange` (časování křehčí); C) `refreshNow` vrací výsledky (mění signaturu).
+- **Kdy žádat o povolení:** A) při zapnutí přepínače *(vybráno — žádný noční systémový dialog při startu)*; B) při startu appky (rušivé, default-off by stejně nemělo žádat).
+- **Stav dedup:** A) v paměti `AppDelegate` *(vybráno — jednoduché; restart = jednorázové re-upozornění, přijatelné)*; B) perzistovat (složitější, malý přínos).
+
+## Guardrails
+
+- **Zakázané akce:** neměnit limit-část v0.1 (parsery, `UsageStore`) ani today-část v0.2 (kromě `Hashable` na `WindowKind` a `onRefreshed` na `RefreshCoordinator`, oboje aditivní). Žádný `UNUserNotificationCenter` mimo `StatusBarApp`. Žádný zápis do `~/.claude`/`~/.codex`.
+- **⚠ Nevratné/odchozí:** žádné v rámci implementace. **Push na GitHub se v tomto běhu NEPROVÁDÍ** (čeká na uživatele). Merge do `main` jen lokálně (vratné).
+- **Stop podmínky:** `old_string` nesedí → ZASTAV, přečti reálný soubor, oprav podle skutečnosti, neimprovizuj nový tvar. v0.1/v0.2 testy začnou padat → ZASTAV (regrese).
+- **Kill criteria:** Pokud se app target po Task 3/4 nepodaří zkompilovat kvůli `UNUserNotificationCenter`/`@AppStorage`/concurrency do 2 pokusů, NEBO spuštěná app spadne při zapnutí přepínače → STOP, zanech report, NEslučovat. (Notifikace nejsou hodny pádu appky.)
+
+## Rollback & Recovery
+
+Čistě aditivní, každý task samostatný commit na `feat/v0.3-notifications` (`main` nedotčen). Zahodit task: `git checkout -- <soubory>` / `git revert <commit>`. Zahodit celou v0.3: `git checkout main && git branch -D feat/v0.3-notifications`. Regrese limit/today části → `git checkout -- Sources/StatusBarKit` a zopakovat jen aditivní edity (`Hashable`, `onRefreshed`).
+
+## Risk Register
+
+| ID | Severity | Likelihood | Risk | Mitigace (krok) | Resolution |
+|----|----------|------------|------|------------------|------------|
+| F4 | HIGH | H | `getNotificationSettings { … self.center … }` @Sendable closure sahá na @MainActor `center` → nekompiluje (Swift 6) | T3/S2 přepsáno: volat `requestAuthorization` přímo, bez vnoření | fixed-in T3/S2 |
+| F1/A6 | MED | M | Doručení notifikace neověřitelné autonomně (ad-hoc app) | T3/S2 `Bundle.main.bundleIdentifier` guard (žádný pád) + default-off + jádro testované; manuál uživatelem | accepted (R1) |
+| F11 | LOW | M | `AppDelegate` editován v T3 i T4 | T3 nemění řádek `menuBar = …`, T4 ano → kotvy nekolidují (ověřeno) | ok (ne-konflikt) |
+| F-hyg | LOW | M | `var u`+`_ = u` v testu → warning | T1/S3 změněno na `let u` | fixed-in T1/S3 |
+| F3 | LOW | L | Restart appky re-upozorní jednou | in-memory stav, default-off | accepted |
+| F6 | LOW | L | Zamítnuté povolení → přepínač zůstane on, nic se nezobrazí | mimo kontrolu appky, žádný pád | accepted |
+
+## Audit Trail
+
+- **Lenses applied:** 1 red-team, 2 security (čisté — notifikace neobsahují citlivý obsah, jen jméno/okno/%), 3 assumptions, 4 dependencies, 5 alternatives, 6 cheap-executor, 7 goal-fit. Lens 4: žádné transition-window (aditivní).
+- **Findings:** 1 HIGH (F4) → fixed; 1 MED (F1/A6) → accepted+mitigated; 4 LOW → fixed/accepted.
+- **Re-audit po hardeningu:** NotificationService bez vnořeného closure (žádný cross-actor přístup); `center` lazy + bundle guard; testy bez warningů. Žádné nové CRIT/HIGH.
+- **Tabletop dry run:** prošel — T1 zavede `Hashable`+`AlertEvaluator`; T2 `PreferencesStore`; T3 `onRefreshed`+`NotificationService`+wiring (callback čte prefs, volá evaluator, posílá); T4 UI přepínač + povolení. `AppDelegate` editován v T3 (vloží props+callback nad `menuBar=…`) i T4 (změní `menuBar=…` řádek) — kotvy se nepřekrývají. Identifikátory konzistentní (`onRefreshed`, `requestAuthorizationIfNeeded`, `PreferenceKeys.*`, `AlertKey`).
+- **Decisions made autonomously (uživatel deleguje, spí):** fix-scope = vše (F4 fix povinný, guard, hygiena); F1/A6 = accept+dokumentovat (jinak neověřitelné); kill criteria = STOP při ne-kompilaci app targetu / pádu na opt-in. Push se NEPROVÁDÍ (čeká na uživatele).
+- **Open items to watch:** doručení notifikace ověří uživatel manuálně (zapnout přepínač + povolit); smoke v T4/S7 ověří jen že přepínač je v popoveru a app nespadne.
 
 ## Hotová definice v0.3
 - Popover má přepínač „Upozornit při zbývajících ≤ N %" (default vypnuto) + výběr prahu (5/10/15/20).
