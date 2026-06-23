@@ -18,8 +18,9 @@ public enum MenuBarTitleBuilder {
     public static func segments(for usages: [ProviderUsage]) -> [MenuBarSegment] {
         usages.map { u in
             if case .unavailable = u.status { return MenuBarSegment(providerId: u.providerId, text: "—", level: .normal) }
-            let p = u.nearestLimitPercent
-            return MenuBarSegment(providerId: u.providerId, text: "\(p)%", level: UsageLevel.level(forPercent: p))
+            let p = u.nearestLimitPercent          // vyčerpáno
+            let remaining = max(0, 100 - p)        // zbývá (to zobrazujeme)
+            return MenuBarSegment(providerId: u.providerId, text: "\(remaining)%", level: UsageLevel.level(forPercent: p))
         }
     }
 }

@@ -46,10 +46,12 @@ private struct ProviderCard: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(WindowLabel.text(for: w.kind)).font(.caption).foregroundStyle(.secondary); Spacer()
-                    Text("\(Int((w.usedFraction*100).rounded()))%").font(.caption).fontWeight(.semibold)
+                    // ZBÝVAJÍCÍ %, ne vyčerpáno
+                    Text("\(max(0, 100 - Int((w.usedFraction*100).rounded())))% zbývá").font(.caption).fontWeight(.semibold)
                     if let r = w.resetAt { Text("· \(ResetFormatter.short(until: r, now: Date()))").font(.caption2).foregroundStyle(.secondary) }
                 }
-                ProgressView(value: min(w.usedFraction, 1.0)).tint(UsageColor.color(forFraction: w.usedFraction))  // clamp pro overage (M2)
+                // Fuel-gauge: bar = kolik zbývá; barva podle nebezpečí (málo zbývá → červená)
+                ProgressView(value: max(0.0, min(1.0, 1 - w.usedFraction))).tint(UsageColor.color(forFraction: w.usedFraction))
             }
         }
     }

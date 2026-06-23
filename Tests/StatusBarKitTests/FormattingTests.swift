@@ -17,8 +17,9 @@ import Foundation
             windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.92, resetAt: nil)], status: .ok, lastUpdated: Date()),
     ]
     let s = MenuBarTitleBuilder.segments(for: usages)
-    #expect(s[0] == MenuBarSegment(providerId: .claudeCode, text: "42%", level: .normal))
-    #expect(s[1] == MenuBarSegment(providerId: .codex, text: "92%", level: .critical))
+    // Text = ZBÝVAJÍCÍ % (100 - vyčerpáno); úroveň/barva pořád dle nebezpečí (vyčerpáno).
+    #expect(s[0] == MenuBarSegment(providerId: .claudeCode, text: "58%", level: .normal))   // 42 vyčerpáno → 58 zbývá
+    #expect(s[1] == MenuBarSegment(providerId: .codex, text: "8%", level: .critical))        // 92 vyčerpáno → 8 zbývá
 }
 
 @Test func segmentNedostupný() {

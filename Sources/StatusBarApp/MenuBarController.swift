@@ -22,9 +22,10 @@ final class MenuBarController {
             }
         }
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 320, height: 240)
-        popover.contentViewController = NSHostingController(rootView:
+        let hosting = NSHostingController(rootView:
             PopoverView(store: store, onRefresh: onClick, onQuit: { NSApp.terminate(nil) }))
+        hosting.sizingOptions = .preferredContentSize   // popover se přizpůsobí výšce obsahu (nic se neořízne)
+        popover.contentViewController = hosting
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
     }
@@ -60,7 +61,7 @@ final class MenuBarController {
         statusItem.button?.attributedTitle = title
         statusItem.button?.toolTip = usages.map { u -> String in
             switch u.status {
-            case .ok: return "\(u.displayName): \(u.nearestLimitPercent) %"
+            case .ok: return "\(u.displayName): \(max(0, 100 - u.nearestLimitPercent)) % zbývá"
             case .degraded(let m): return "\(u.displayName): ⚠︎ \(m)"
             case .unavailable(let m): return "\(u.displayName): — \(m)"
             }
