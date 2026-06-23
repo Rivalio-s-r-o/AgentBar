@@ -1,30 +1,40 @@
 import AppKit
 import Combine
+import SwiftUI
 import StatusBarKit
 
 @MainActor
 final class MenuBarController {
     private let store: UsageStore
-    private let onClick: () -> Void
+    private let onRefresh: () -> Void
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private let popover = NSPopover()
     private var cancellable: AnyCancellable?
 
     init(store: UsageStore, onClick: @escaping () -> Void) {
         self.store = store
-        self.onClick = onClick
+        self.onRefresh = onClick
         render(store.orderedUsages)
-        // replaceAll → jeden objectWillChange na refresh → jeden render (žádný flicker, M3)
         cancellable = store.objectWillChange.sink { [weak self] _ in
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.render(self.store.orderedUsages)
-            }
+            DispatchQueue.main.async { self?.render(self?.store.orderedUsages ?? []) }
         }
+        popover.behavior = .transient
+        popover.contentSize = NSSize(width: 320, height: 240)
+        popover.contentViewController = NSHostingController(rootView:
+            PopoverView(store: store, onRefresh: onClick, onQuit: { NSApp.terminate(nil) }))
         statusItem.button?.target = self
-        statusItem.button?.action = #selector(handleClick)
+        statusItem.button?.action = #selector(togglePopover)
     }
 
-    @objc private func handleClick() { onClick() }
+    @objc private func togglePopover() {
+        guard let b = statusItem.button else { return }
+        if popover.isShown { popover.performClose(nil) }
+        else {
+            onRefresh()  // refresh při otevření
+            popover.show(relativeTo: b.bounds, of: b, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
+        }
+    }
 
     private func levelColor(_ l: UsageLevel) -> NSColor {
         switch l { case .normal: return .labelColor; case .warning: return .systemOrange; case .critical: return .systemRed }
@@ -35,7 +45,6 @@ final class MenuBarController {
         case .codex: return NSColor(red: 0.06, green: 0.64, blue: 0.50, alpha: 1)
         }
     }
-
     private func render(_ usages: [ProviderUsage]) {
         let segs = MenuBarTitleBuilder.segments(for: usages)
         let title = NSMutableAttributedString()
