@@ -4,6 +4,8 @@ import Foundation
 public final class RefreshCoordinator {
     private let store: UsageStore
     private let providers: [any UsageProvider]
+    /// Zavolá se po každém refreshi s novými daty (default no-op). App vrstva sem napojí vyhodnocení upozornění.
+    public var onRefreshed: ([ProviderUsage]) -> Void = { _ in }
     public init(store: UsageStore, providers: [any UsageProvider]) { self.store = store; self.providers = providers }
     public func refreshNow() async {
         var results: [ProviderUsage] = []
@@ -12,5 +14,6 @@ public final class RefreshCoordinator {
             for await u in group { results.append(u) }
         }
         store.replaceAll(results)
+        onRefreshed(results)
     }
 }

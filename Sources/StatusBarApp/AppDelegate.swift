@@ -4,12 +4,24 @@ import StatusBarKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = UsageStore()
+    private let prefs = PreferencesStore()
+    private let notifier = NotificationService()
+    private var lastAlerted: Set<AlertKey> = []
     private var coordinator: RefreshCoordinator!
     private var menuBar: MenuBarController!
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         coordinator = RefreshCoordinator(store: store, providers: [ClaudeCodeCollector(), CodexCollector()])
+        coordinator.onRefreshed = { [weak self] usages in
+            guard let self, self.prefs.notificationsEnabled else { return }
+            let (toFire, newState) = AlertEvaluator.evaluate(
+                usages: usages,
+                thresholdPercent: self.prefs.remainingThresholdPercent,
+                alreadyAlerted: self.lastAlerted)
+            self.lastAlerted = newState
+            self.notifier.post(toFire)
+        }
         menuBar = MenuBarController(store: store, onClick: { [weak self] in
             Task { await self?.coordinator.refreshNow() }
         })
