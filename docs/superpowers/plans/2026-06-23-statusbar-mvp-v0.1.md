@@ -72,7 +72,7 @@
 
 **Files:** žádné (systémový setup).
 
-- [ ] **Action:** Ověř, zda je k dispozici `swift test`. Spusť: `swift test --help >/dev/null 2>&1 && echo OK || echo NEEDS-XCODE`. Pokud `OK`, přeskoč na Verify. Pokud `NEEDS-XCODE`: nainstaluj plný Xcode z App Store (nebo `xcodes`), pak ⚠ `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
+- [ ] **Action:** Ověř, zda `swift test` reálně kompiluje s modulem `Testing` (NE přes `--help` — to dává falešné OK, protože help modul nepotřebuje). Použij reálný probe ze sekce „Verify success" níže. Pokud selže na `no such module 'Testing'`: nainstaluj plný Xcode z App Store (nebo `xcodes`), pak ⚠ `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` a `sudo xcodebuild -license accept && sudo xcodebuild -runFirstLaunch`.
 - **Preconditions:** `/Applications/Xcode.app` existuje (jinak ZASTAV — viz Kill criteria). Před `xcode-select` si zaznamenej `xcode-select -p`.
 - [ ] **Verify success:** `xcrun --find swift` ukazuje cestu uvnitř `Xcode.app`; a tato sekvence projde:
   ```bash
