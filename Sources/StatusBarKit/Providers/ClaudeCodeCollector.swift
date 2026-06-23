@@ -19,14 +19,15 @@ public struct ClaudeCodeCollector: UsageProvider {
         }
         do {
             let usage = try ClaudeUsageCacheParser.parse(data)
+            let today = ClaudeTokenScanner().todayUsage(now: now)
             let age = now.timeIntervalSince(usage.lastUpdated)
             if age > staleAfter {
                 return ProviderUsage(providerId: usage.providerId, displayName: usage.displayName,
                     planLabel: usage.planLabel, windows: usage.windows,
                     status: .degraded("Data stará \(Int(age/60)) min — otevři Claude Code."),
-                    lastUpdated: usage.lastUpdated)
+                    lastUpdated: usage.lastUpdated, today: today)
             }
-            return usage
+            return usage.with(today: today)
         } catch {
             return .unavailable(.claudeCode, displayName: "Claude Code",
                 reason: "Cache nelze přečíst: \(error.localizedDescription)", now: now)
