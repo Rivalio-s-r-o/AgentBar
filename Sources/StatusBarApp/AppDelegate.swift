@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menuBar = MenuBarController(store: store, onClick: { [weak self] in
             Task { await self?.coordinator.refreshNow() }
+        }, onRequestNotificationPermission: { [weak self] in
+            self?.notifier.requestAuthorizationIfNeeded()
         })
         Task { await coordinator.refreshNow() }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
