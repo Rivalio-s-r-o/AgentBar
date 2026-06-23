@@ -4,3 +4,5 @@
 *.app
 DerivedData/
 .swiftpm/
+.DS_Store
+**/.DS_Store
