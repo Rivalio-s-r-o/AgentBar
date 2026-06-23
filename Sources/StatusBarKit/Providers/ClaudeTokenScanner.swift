@@ -23,9 +23,13 @@ public struct ClaudeTokenScanner: Sendable {
                 }
             }
         }
-        guard !byModel.isEmpty else { return nil }
-        let perModel = byModel.map { ModelTokens(modelName: $0.key, tokens: $0.value) }
+        // Vyhoď modely s 0 tokeny (např. Claude Code placeholder "<synthetic>") —
+        // do rozpadu ani součtu nepatří a kazily by UI řádek rozpadu.
+        let perModel = byModel
+            .filter { $0.value.totalTokens > 0 }
+            .map { ModelTokens(modelName: $0.key, tokens: $0.value) }
             .sorted { $0.modelName < $1.modelName }
+        guard !perModel.isEmpty else { return nil }
         return TodayUsage(perModel: perModel, estimatedCost: PricingEstimator.estimate(perModel))
     }
 }
