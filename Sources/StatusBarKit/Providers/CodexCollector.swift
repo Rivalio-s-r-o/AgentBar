@@ -27,8 +27,10 @@ public struct CodexCollector: UsageProvider {
             let status: ProviderStatus = age > staleAfter
                 ? .degraded("Data stará \(Int(age/3600)) h — spusť `codex` pro aktualizaci.")
                 : .ok
+            let today = CodexTokenScanner().todayUsage(now: now)
             return ProviderUsage(providerId: .codex, displayName: "Codex",
-                planLabel: snap.planType, windows: snap.windows, status: status, lastUpdated: f.modified)
+                planLabel: snap.planType, windows: snap.windows, status: status,
+                lastUpdated: f.modified, today: today)
         }
         return .unavailable(.codex, displayName: "Codex",
             reason: "V posledních \(maxFilesToScan) sessionech nejsou žádné limity.", now: now)
