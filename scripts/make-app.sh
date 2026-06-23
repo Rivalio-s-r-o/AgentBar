@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 CONFIG="${1:-release}"
-swift build -c "$CONFIG"
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/StatusBarApp"
 APP="StatusBar.app"
 rm -rf "$APP"

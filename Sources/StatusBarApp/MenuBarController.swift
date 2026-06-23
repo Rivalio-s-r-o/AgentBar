@@ -15,7 +15,10 @@ final class MenuBarController {
         render(store.orderedUsages)
         // replaceAll → jeden objectWillChange na refresh → jeden render (žádný flicker, M3)
         cancellable = store.objectWillChange.sink { [weak self] _ in
-            DispatchQueue.main.async { self?.render(self?.store.orderedUsages ?? []) }
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.render(self.store.orderedUsages)
+            }
         }
         statusItem.button?.target = self
         statusItem.button?.action = #selector(handleClick)

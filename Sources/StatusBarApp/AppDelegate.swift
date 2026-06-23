@@ -15,7 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
         Task { await coordinator.refreshNow() }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { await self?.coordinator.refreshNow() }
+            guard let self else { return }
+            Task { await self.coordinator.refreshNow() }
         }
     }
 }
