@@ -1,0 +1,5 @@
+{"timestamp": 1782223012.474268, "data": {"limits": [
+  {"kind":"session","group":"session","percent":8,"severity":"normal","resets_at":"2026-06-23T14:59:59.461210+00:00","scope":null,"is_active":true},
+  {"kind":"weekly_all","group":"weekly","percent":2,"severity":"normal","resets_at":"2026-06-30T11:59:59.461233+00:00","scope":null,"is_active":false},
+  {"kind":"weekly_scoped","group":"weekly","percent":12,"severity":"normal","resets_at":"2026-06-30T12:00:00.461241+00:00","scope":{"model":{"id":null,"display_name":"Sonnet"},"surface":null},"is_active":false}
+]}}
