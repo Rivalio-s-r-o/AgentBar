@@ -30,7 +30,7 @@ struct PopoverView: View {
             } else {
                 ForEach(store.orderedUsages, id: \.providerId) { ProviderCard(usage: $0); Divider() }
             }
-            Divider()
+            if store.orderedUsages.isEmpty { Divider() }   // jinak už divider dává ForEach za poslední kartou
             HStack(spacing: 6) {
                 Toggle(isOn: $notifsEnabled) {
                     Text("Upozornit při zbývajících ≤").font(.caption)
