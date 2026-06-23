@@ -23,12 +23,15 @@ public enum CodexRateLimitParser {
 
     public static func latestSnapshot(fromJSONL data: Data) -> CodexSnapshot? {
         let decoder = JSONDecoder()
+        let needle = Data("rate_limits".utf8)
         var last: RateLimits?
         for raw in data.split(separator: UInt8(ascii: "\n")) {
-            guard !raw.isEmpty,
-                  let line = try? decoder.decode(Line.self, from: Data(raw)),
-                  line.type == "event_msg", line.payload?.type == "token_count",
-                  let rl = line.payload?.rate_limits,
+            let line = Data(raw)
+            guard !line.isEmpty,
+                  line.range(of: needle) != nil,
+                  let decoded = try? decoder.decode(Line.self, from: line),
+                  decoded.type == "event_msg", decoded.payload?.type == "token_count",
+                  let rl = decoded.payload?.rate_limits,
                   rl.primary != nil || rl.secondary != nil
             else { continue }
             last = rl

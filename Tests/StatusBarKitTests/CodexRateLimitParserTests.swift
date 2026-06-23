@@ -24,3 +24,14 @@ private func fx(_ n: String) throws -> Data {
 @Test func parserBezLimitůVrátíNil() throws {
     #expect(CodexRateLimitParser.latestSnapshot(fromJSONL: try fx("codex-session-null-limits")) == nil)
 }
+
+@Test func prefiltrPřeskočíŘádkyBezRateLimits() {
+    // Noisy line without "rate_limits" must be skipped; only the token_count line should be decoded.
+    let noisy = #"{"type":"event_msg","payload":{"type":"message","content":"hello world, this is a long assistant message without the magic bytes"}}"#
+    let valid = #"{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":42.0,"window_minutes":300,"resets_at":1776353068},"secondary":null,"plan_type":"pro"}}}"#
+    let jsonl = Data((noisy + "\n" + valid).utf8)
+    let snap = CodexRateLimitParser.latestSnapshot(fromJSONL: jsonl)
+    #expect(snap != nil)
+    let five = snap?.windows.first { $0.kind == .rolling5h }
+    #expect(abs((five?.usedFraction ?? -1) - 0.42) < 0.0001)
+}
