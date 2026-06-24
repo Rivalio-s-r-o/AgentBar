@@ -8,19 +8,63 @@ public enum UsageLevel: Sendable, Equatable {
 }
 
 public struct MenuBarSegment: Sendable, Equatable {
-    public let providerId: ProviderID; public let text: String; public let level: UsageLevel
-    public init(providerId: ProviderID, text: String, level: UsageLevel) {
-        self.providerId = providerId; self.text = text; self.level = level
+    public enum Leading: Sendable, Equatable {
+        case providerDot          // tečka v barvě providera
+        case levelDot             // tečka v barvě stavu (level)
+        case label(String)        // písmenný štítek v barvě stavu
+        case none                 // bez prefixu
+    }
+    public let providerId: ProviderID; public let leading: Leading
+    public let text: String; public let level: UsageLevel
+    public init(providerId: ProviderID, leading: Leading = .providerDot, text: String, level: UsageLevel) {
+        self.providerId = providerId; self.leading = leading; self.text = text; self.level = level
     }
 }
 
 public enum MenuBarTitleBuilder {
-    public static func segments(for usages: [ProviderUsage]) -> [MenuBarSegment] {
-        usages.map { u in
-            if case .unavailable = u.status { return MenuBarSegment(providerId: u.providerId, text: "—", level: .normal) }
-            let p = u.nearestLimitPercent          // vyčerpáno
-            let remaining = max(0, 100 - p)        // zbývá (to zobrazujeme)
-            return MenuBarSegment(providerId: u.providerId, text: "\(remaining)%", level: UsageLevel.level(forPercent: p))
+    static func shortLabel(_ id: ProviderID) -> String {
+        switch id { case .claudeCode: return "CC"; case .codex: return "CX" }
+    }
+
+    private static func displayable(_ u: ProviderUsage) -> Bool {
+        if case .unavailable = u.status { return false }; return true
+    }
+
+    /// Segment pro styly A/B (per provider, tečka providera nebo štítek).
+    private static func perProvider(_ u: ProviderUsage, label: Bool, showUsedPercent: Bool) -> MenuBarSegment {
+        let leading: MenuBarSegment.Leading = label ? .label(shortLabel(u.providerId)) : .providerDot
+        if case .unavailable = u.status {
+            return MenuBarSegment(providerId: u.providerId, leading: leading, text: "—", level: .normal)
+        }
+        let used = u.nearestLimitPercent
+        let shown = showUsedPercent ? used : max(0, 100 - used)
+        return MenuBarSegment(providerId: u.providerId, leading: leading,
+                              text: "\(shown)%", level: UsageLevel.level(forPercent: used))
+    }
+
+    public static func segments(for usages: [ProviderUsage],
+                                style: MenuBarStyle = .dotPercent,
+                                showUsedPercent: Bool = false) -> [MenuBarSegment] {
+        switch style {
+        case .dotPercent:
+            return usages.map { perProvider($0, label: false, showUsedPercent: showUsedPercent) }
+        case .labelPercent:
+            return usages.map { perProvider($0, label: true, showUsedPercent: showUsedPercent) }
+        case .dotOnly:
+            return usages.map { u in
+                let level = displayable(u) ? UsageLevel.level(forPercent: u.nearestLimitPercent) : .normal
+                return MenuBarSegment(providerId: u.providerId, leading: .levelDot, text: "", level: level)
+            }
+        case .worst:
+            let pool = usages.filter(displayable)
+            if let worst = pool.max(by: { $0.nearestLimitPercent < $1.nearestLimitPercent }) {
+                let used = worst.nearestLimitPercent
+                let shown = showUsedPercent ? used : max(0, 100 - used)
+                return [MenuBarSegment(providerId: worst.providerId, leading: .providerDot,
+                                       text: "\(shown)%", level: UsageLevel.level(forPercent: used))]
+            }
+            if usages.isEmpty { return [] }
+            return [MenuBarSegment(providerId: usages[0].providerId, leading: .none, text: "—", level: .normal)]
         }
     }
 }
