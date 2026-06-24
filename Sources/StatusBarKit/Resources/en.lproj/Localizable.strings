@@ -27,3 +27,7 @@
 "collector.codex.nosession" = "No session in ~/.codex/sessions. Run `codex` once.";
 "collector.codex.stale" = "Data %lld h old — run `codex` to refresh.";
 "collector.codex.nolimits" = "No limits in the last %lld sessions.";
+
+"burn.projected" = "→ ~%lld%% by reset";
+"burn.exhaust" = "limit in ~%@";
+"burn.reached" = "limit reached";

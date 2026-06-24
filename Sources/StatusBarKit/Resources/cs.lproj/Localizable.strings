@@ -27,3 +27,7 @@
 "collector.codex.nosession" = "Žádná session v ~/.codex/sessions. Spusť jednou `codex`.";
 "collector.codex.stale" = "Data stará %lld h — spusť `codex` pro aktualizaci.";
 "collector.codex.nolimits" = "V posledních %lld sessionech nejsou žádné limity.";
+
+"burn.projected" = "→ ~%lld %% do resetu";
+"burn.exhaust" = "limit ~za %@";
+"burn.reached" = "limit vyčerpán";
