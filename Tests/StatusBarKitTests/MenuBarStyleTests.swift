@@ -81,8 +81,11 @@ private let cx = { usage(.codex, used: 0.92) }()
     #expect(MenuBarStyle(rawValue: "worst") == .worst)
     #expect(MenuBarStyle(rawValue: "nesmysl") == nil)               // fallback řeší PreferencesStore
     #expect(MenuBarStyle.allCases.count == 4)
-    #expect(MenuBarStyle.dotPercent.displayName == "Tečka + %")
-    #expect(MenuBarStyle.worst.displayName == "Nejkritičtější")
+    let cs = L10n.bundle("cs"); let en = L10n.bundle("en")
+    #expect(MenuBarStyle.dotPercent.displayName(bundle: cs) == "Tečka + %")
+    #expect(MenuBarStyle.worst.displayName(bundle: cs) == "Nejkritičtější")
+    #expect(MenuBarStyle.dotPercent.displayName(bundle: en) == "Dot + %")
+    #expect(MenuBarStyle.worst.displayName(bundle: en) == "Most critical")
 }
 
 @Test func stylCNedostupný() {

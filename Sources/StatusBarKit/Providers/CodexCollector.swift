@@ -31,21 +31,21 @@ public struct CodexCollector: UsageProvider {
         let files = newestSessionFiles(limit: maxFilesToScan)   // od nejnovějšího
         guard !files.isEmpty else {
             return .unavailable(.codex, displayName: "Codex",
-                reason: "Žádná session v ~/.codex/sessions. Spusť jednou `codex`.", now: now)
+                reason: NSLocalizedString("collector.codex.nosession", bundle: .module, comment: ""), now: now)
         }
         for f in files {
             guard let data = try? Data(contentsOf: f.url) else { continue }   // číst, NElogovat obsah
             guard let snap = CodexRateLimitParser.latestSnapshot(fromJSONL: data) else { continue }
             let age = now.timeIntervalSince(f.modified)
             let status: ProviderStatus = age > staleAfter
-                ? .degraded("Data stará \(Int(age/3600)) h — spusť `codex` pro aktualizaci.")
+                ? .degraded(String(format: NSLocalizedString("collector.codex.stale", bundle: .module, comment: ""), Int(age/3600)))
                 : .ok
             return ProviderUsage(providerId: .codex, displayName: "Codex",
                 planLabel: CodexPlan.label(forPlanType: snap.planType), windows: snap.windows,
                 status: status, lastUpdated: f.modified, today: today)
         }
         return .unavailable(.codex, displayName: "Codex",
-            reason: "V posledních \(maxFilesToScan) sessionech nejsou žádné limity.", now: now)
+            reason: String(format: NSLocalizedString("collector.codex.nolimits", bundle: .module, comment: ""), maxFilesToScan), now: now)
     }
 
     private func newestSessionFiles(limit: Int) -> [(url: URL, modified: Date)] {

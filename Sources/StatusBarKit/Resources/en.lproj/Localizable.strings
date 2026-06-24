@@ -1,1 +1,29 @@
 "test.ping" = "pong-en";
+
+"reltime.now" = "just now";
+"reltime.min" = "%lld min ago";
+"reltime.hour" = "%lld h ago";
+"reltime.day" = "%lld d ago";
+
+"pace.ahead" = "%lld %% ahead";
+"pace.behind" = "%lld %% behind";
+"pace.onpace" = "on pace";
+
+"reset.now" = "now";
+
+"window.5h" = "5h window";
+"window.week" = "Week";
+"window.week.scope" = "Week · %@";
+
+"style.dotPercent" = "Dot + %";
+"style.labelPercent" = "Label + %";
+"style.dotOnly" = "Dot only";
+"style.worst" = "Most critical";
+
+"collector.claude.missing" = "File %@ not found. Open Claude Code and run /usage.";
+"collector.claude.stale" = "Data %lld min old — open Claude Code.";
+"collector.claude.unreadable" = "Cache unreadable: %@";
+
+"collector.codex.nosession" = "No session in ~/.codex/sessions. Run `codex` once.";
+"collector.codex.stale" = "Data %lld h old — run `codex` to refresh.";
+"collector.codex.nolimits" = "No limits in the last %lld sessions.";

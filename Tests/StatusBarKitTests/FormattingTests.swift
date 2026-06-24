@@ -29,13 +29,19 @@ import Foundation
 
 @Test func resetFormat() {
     let now = Date(timeIntervalSince1970: 0)
-    #expect(ResetFormatter.short(until: Date(timeIntervalSince1970: 2*3600+14*60), now: now) == "2h 14m")
+    let cs = L10n.bundle("cs"); let en = L10n.bundle("en")
+    #expect(ResetFormatter.short(until: Date(timeIntervalSince1970: 2*3600+14*60), now: now) == "2h 14m")  // numerický, beze slov
     #expect(ResetFormatter.short(until: Date(timeIntervalSince1970: 41*60), now: now) == "41m")
-    #expect(ResetFormatter.short(until: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 100)) == "teď")
+    #expect(ResetFormatter.short(until: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 100), bundle: cs) == "teď")
+    #expect(ResetFormatter.short(until: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 100), bundle: en) == "now")
 }
 
 @Test func popiskyOken() {
-    #expect(WindowLabel.text(for: .rolling5h) == "5h okno")
-    #expect(WindowLabel.text(for: .weekly(scope: nil)) == "Týden")
-    #expect(WindowLabel.text(for: .weekly(scope: "Sonnet")) == "Týden · Sonnet")
+    let cs = L10n.bundle("cs"); let en = L10n.bundle("en")
+    #expect(WindowLabel.text(for: .rolling5h, bundle: cs) == "5h okno")
+    #expect(WindowLabel.text(for: .weekly(scope: nil), bundle: cs) == "Týden")
+    #expect(WindowLabel.text(for: .weekly(scope: "Sonnet"), bundle: cs) == "Týden · Sonnet")
+    #expect(WindowLabel.text(for: .rolling5h, bundle: en) == "5h window")
+    #expect(WindowLabel.text(for: .weekly(scope: nil), bundle: en) == "Week")
+    #expect(WindowLabel.text(for: .weekly(scope: "Sonnet"), bundle: en) == "Week · Sonnet")
 }

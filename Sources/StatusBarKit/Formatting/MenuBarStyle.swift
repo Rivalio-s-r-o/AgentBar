@@ -6,12 +6,14 @@ public enum MenuBarStyle: String, Sendable, Equatable, Hashable, CaseIterable {
     case dotOnly         // C — jen tečka obarvená podle stavu
     case worst           // D — jediné číslo = nejnižší zbývající napříč providery
 
-    public var displayName: String {
+    public func displayName(bundle: Bundle? = nil) -> String {
+        let b = bundle ?? .module
         switch self {
-        case .dotPercent:   return "Tečka + %"
-        case .labelPercent: return "Štítek + %"
-        case .dotOnly:      return "Jen tečka"
-        case .worst:        return "Nejkritičtější"
+        case .dotPercent:   return NSLocalizedString("style.dotPercent", bundle: b, comment: "")
+        case .labelPercent: return NSLocalizedString("style.labelPercent", bundle: b, comment: "")
+        case .dotOnly:      return NSLocalizedString("style.dotOnly", bundle: b, comment: "")
+        case .worst:        return NSLocalizedString("style.worst", bundle: b, comment: "")
         }
     }
+    public var displayName: String { displayName() }
 }

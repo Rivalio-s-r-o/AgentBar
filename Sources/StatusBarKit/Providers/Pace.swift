@@ -11,11 +11,12 @@ public enum PaceCalculator {
     }
 }
 
-/// Lidský popisek pace (česky; lokalizace v0.9c).
+/// Lidský popisek pace. Lokalizováno.
 public enum PaceLabel {
-    public static func text(deltaPercent d: Int) -> String {
-        if d > 0 { return "napřed o \(d) %" }
-        if d < 0 { return "pozadu o \(-d) %" }
-        return "v tempu"
+    public static func text(deltaPercent d: Int, bundle: Bundle? = nil) -> String {
+        let b = bundle ?? .module
+        if d > 0 { return String(format: NSLocalizedString("pace.ahead", bundle: b, comment: "X % ahead"), d) }
+        if d < 0 { return String(format: NSLocalizedString("pace.behind", bundle: b, comment: "X % behind"), -d) }
+        return NSLocalizedString("pace.onpace", bundle: b, comment: "on pace")
     }
 }

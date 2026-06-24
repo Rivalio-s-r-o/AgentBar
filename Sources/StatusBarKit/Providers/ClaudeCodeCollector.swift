@@ -27,7 +27,7 @@ public struct ClaudeCodeCollector: UsageProvider {
         // 2) Fallback: lokální cache (stávající chování v0.1–v0.5).
         guard let data = try? Data(contentsOf: cachePath) else {
             return .unavailable(.claudeCode, displayName: "Claude Code",
-                reason: "Soubor \(cachePath.lastPathComponent) nenalezen. Otevři Claude Code a spusť /usage.", now: now)
+                reason: String(format: NSLocalizedString("collector.claude.missing", bundle: .module, comment: ""), cachePath.lastPathComponent), now: now)
         }
         do {
             let usage = try ClaudeUsageCacheParser.parse(data)
@@ -35,13 +35,13 @@ public struct ClaudeCodeCollector: UsageProvider {
             if age > staleAfter {
                 return ProviderUsage(providerId: usage.providerId, displayName: usage.displayName,
                     planLabel: usage.planLabel, windows: usage.windows,
-                    status: .degraded("Data stará \(Int(age/60)) min — otevři Claude Code."),
+                    status: .degraded(String(format: NSLocalizedString("collector.claude.stale", bundle: .module, comment: ""), Int(age/60))),
                     lastUpdated: usage.lastUpdated, today: today)
             }
             return usage.with(today: today)
         } catch {
             return .unavailable(.claudeCode, displayName: "Claude Code",
-                reason: "Cache nelze přečíst: \(error.localizedDescription)", now: now)
+                reason: String(format: NSLocalizedString("collector.claude.unreadable", bundle: .module, comment: ""), error.localizedDescription), now: now)
         }
     }
 }

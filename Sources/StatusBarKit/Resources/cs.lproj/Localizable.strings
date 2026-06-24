@@ -1,1 +1,29 @@
 "test.ping" = "pong-cs";
+
+"reltime.now" = "právě teď";
+"reltime.min" = "před %lld min";
+"reltime.hour" = "před %lld h";
+"reltime.day" = "před %lld d";
+
+"pace.ahead" = "napřed o %lld %%";
+"pace.behind" = "pozadu o %lld %%";
+"pace.onpace" = "v tempu";
+
+"reset.now" = "teď";
+
+"window.5h" = "5h okno";
+"window.week" = "Týden";
+"window.week.scope" = "Týden · %@";
+
+"style.dotPercent" = "Tečka + %";
+"style.labelPercent" = "Štítek + %";
+"style.dotOnly" = "Jen tečka";
+"style.worst" = "Nejkritičtější";
+
+"collector.claude.missing" = "Soubor %@ nenalezen. Otevři Claude Code a spusť /usage.";
+"collector.claude.stale" = "Data stará %lld min — otevři Claude Code.";
+"collector.claude.unreadable" = "Cache nelze přečíst: %@";
+
+"collector.codex.nosession" = "Žádná session v ~/.codex/sessions. Spusť jednou `codex`.";
+"collector.codex.stale" = "Data stará %lld h — spusť `codex` pro aktualizaci.";
+"collector.codex.nolimits" = "V posledních %lld sessionech nejsou žádné limity.";

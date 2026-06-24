@@ -70,18 +70,23 @@ public enum MenuBarTitleBuilder {
 }
 
 public enum ResetFormatter {
-    public static func short(until date: Date, now: Date) -> String {
-        let s = Int(date.timeIntervalSince(now)); guard s > 0 else { return "teď" }
+    public static func short(until date: Date, now: Date, bundle: Bundle? = nil) -> String {
+        let b = bundle ?? .module
+        let s = Int(date.timeIntervalSince(now))
+        guard s > 0 else { return NSLocalizedString("reset.now", bundle: b, comment: "resets now") }
         let h = s / 3600, m = (s % 3600) / 60
-        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+        return h > 0 ? "\(h)h \(m)m" : "\(m)m"   // numerický formát beze slov — nelokalizuje se
     }
 }
 
 public enum WindowLabel {
-    public static func text(for kind: WindowKind) -> String {
+    public static func text(for kind: WindowKind, bundle: Bundle? = nil) -> String {
+        let b = bundle ?? .module
         switch kind {
-        case .rolling5h: return "5h okno"
-        case .weekly(let s): return s.map { "Týden · \($0)" } ?? "Týden"
+        case .rolling5h: return NSLocalizedString("window.5h", bundle: b, comment: "5h rolling window")
+        case .weekly(let s):
+            if let s { return String(format: NSLocalizedString("window.week.scope", bundle: b, comment: "Week · scope"), s) }
+            return NSLocalizedString("window.week", bundle: b, comment: "Week")
         }
     }
 }
