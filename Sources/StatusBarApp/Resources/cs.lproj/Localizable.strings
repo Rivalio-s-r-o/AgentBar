@@ -41,3 +41,12 @@
 "menubar.tooltip.unavailable" = "%@: — %@";
 
 "window.settings.title" = "StatusBar — Nastavení";
+
+"popover.update" = "Nová verze %@ →";
+"settings.updates" = "Aktualizace";
+"settings.autoUpdate" = "Kontrolovat aktualizace automaticky";
+"settings.checkNow" = "Zkontrolovat nyní";
+"settings.update.checking" = "Kontroluji…";
+"settings.update.upToDate" = "Nejnovější verze (%@)";
+"settings.update.available" = "Nová verze %@ je k dispozici";
+"settings.update.unknown" = "Nelze ověřit";

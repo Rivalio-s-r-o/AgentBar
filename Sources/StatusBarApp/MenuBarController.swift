@@ -7,16 +7,18 @@ import StatusBarKit
 final class MenuBarController {
     private let store: UsageStore
     private let prefs: PreferencesStore
+    private let updates: UpdateCoordinator
     private let onRefresh: () -> Void
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private var cancellable: AnyCancellable?
 
     private let onOpenSettings: () -> Void
-    init(store: UsageStore, costHistory: CostHistoryStore, prefs: PreferencesStore, onClick: @escaping () -> Void,
-         onOpenSettings: @escaping () -> Void = {}) {
+    init(store: UsageStore, costHistory: CostHistoryStore, prefs: PreferencesStore, updates: UpdateCoordinator,
+         onClick: @escaping () -> Void, onOpenSettings: @escaping () -> Void = {}) {
         self.store = store
         self.prefs = prefs
+        self.updates = updates
         self.onRefresh = onClick
         self.onOpenSettings = onOpenSettings
         render(store.orderedUsages)
@@ -28,8 +30,8 @@ final class MenuBarController {
         }
         popover.behavior = .transient
         let hosting = NSHostingController(rootView:
-            PopoverView(store: store, costHistory: costHistory, onRefresh: onClick, onQuit: { NSApp.terminate(nil) },
-                        onOpenSettings: onOpenSettings))
+            PopoverView(store: store, costHistory: costHistory, updates: updates, onRefresh: onClick,
+                        onQuit: { NSApp.terminate(nil) }, onOpenSettings: onOpenSettings))
         hosting.sizingOptions = .preferredContentSize
         popover.contentViewController = hosting
         statusItem.button?.target = self

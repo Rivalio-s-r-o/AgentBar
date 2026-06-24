@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let notifier = NotificationService()
     private var lastAlerted: Set<AlertKey> = []
     private var coordinator: RefreshCoordinator!
+    private var updates: UpdateCoordinator!
     private var menuBar: MenuBarController!
     private var settings: SettingsWindowController!
     private var timer: Timer?
@@ -33,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        updates = UpdateCoordinator(prefs: prefs)
         coordinator = RefreshCoordinator(store: store, providers: [
             ClaudeCodeCollector(liveSource: LiveClaudeUsageSource()),
             CodexCollector(liveSource: LiveCodexUsageSource()),
@@ -46,20 +48,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.lastAlerted = newState
             self.notifier.post(toFire)
         }
-        settings = SettingsWindowController(onRequestNotificationPermission: { [weak self] in
-            self?.notifier.requestAuthorizationIfNeeded()
-        }, onAppearanceChanged: { [weak self] in
-            self?.menuBar?.applyAppearance()
-        })
-        menuBar = MenuBarController(store: store, costHistory: costHistory, prefs: prefs, onClick: { [weak self] in
-            guard let self else { return }
-            Task { await self.coordinator.refreshNow(includeToday: true) }   // today (rychlé)
-            self.costHistory.refreshIfStale()                                 // 30 dní (throttle 6h, off-main)
-        }, onOpenSettings: { [weak self] in
-            self?.settings.show()
-        })
+        settings = SettingsWindowController(
+            onRequestNotificationPermission: { [weak self] in
+                self?.notifier.requestAuthorizationIfNeeded()
+            },
+            onAppearanceChanged: { [weak self] in
+                self?.menuBar?.applyAppearance()
+            },
+            updates: updates,
+            onCheckNow: { [weak self] in Task { await self?.updates.checkNow() } }
+        )
+        menuBar = MenuBarController(store: store, costHistory: costHistory, prefs: prefs, updates: updates,
+            onClick: { [weak self] in
+                guard let self else { return }
+                Task { await self.coordinator.refreshNow(includeToday: true) }   // today (rychlé)
+                self.costHistory.refreshIfStale()                                 // 30 dní (throttle 6h, off-main)
+                Task { await self.updates.checkIfDue() }
+            },
+            onOpenSettings: { [weak self] in
+                self?.settings.show()
+            })
         Task { await coordinator.refreshNow(includeToday: false) }            // start: jen limity
         costHistory.refreshIfStale()                                          // start: nachystej 30denní data
+        Task { await updates.checkIfDue() }                                   // start: zkontroluj aktualizace
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             guard let self else { return }
             Task { await self.coordinator.refreshNow(includeToday: false) }   // 60s: jen limity — 30denní cenu NEVOLÁ

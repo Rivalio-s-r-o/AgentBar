@@ -5,6 +5,7 @@ import StatusBarKit
 struct PopoverView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var costHistory: CostHistoryStore
+    @ObservedObject var updates: UpdateCoordinator
     let onRefresh: () -> Void
     let onQuit: () -> Void
     var onOpenSettings: () -> Void = {}
@@ -24,6 +25,19 @@ struct PopoverView: View {
                 Button(action: onRefresh) { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
             }.padding(.horizontal, 14).padding(.vertical, 10)
             Divider()
+            if case .updateAvailable(let v, let url) = updates.status {
+                Button {
+                    if let u = URL(string: url) { NSWorkspace.shared.open(u) }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill").foregroundStyle(.blue)
+                        Text(String(format: NSLocalizedString("popover.update", bundle: .module, comment: ""), v.description))
+                            .font(.caption).fontWeight(.medium)
+                        Spacer()
+                    }
+                }.buttonStyle(.borderless).padding(.horizontal, 14).padding(.vertical, 6)
+                Divider()
+            }
             if store.orderedUsages.isEmpty {
                 Text(String(localized: "popover.loading", bundle: .module)).foregroundStyle(.secondary).padding(14)
             } else {

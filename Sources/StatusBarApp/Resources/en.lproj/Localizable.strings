@@ -41,3 +41,12 @@
 "menubar.tooltip.unavailable" = "%@: — %@";
 
 "window.settings.title" = "StatusBar — Settings";
+
+"popover.update" = "New version %@ →";
+"settings.updates" = "Updates";
+"settings.autoUpdate" = "Check for updates automatically";
+"settings.checkNow" = "Check now";
+"settings.update.checking" = "Checking…";
+"settings.update.upToDate" = "Latest version (%@)";
+"settings.update.available" = "New version %@ available";
+"settings.update.unknown" = "Couldn't check";
