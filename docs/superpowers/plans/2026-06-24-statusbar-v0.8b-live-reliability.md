@@ -418,7 +418,11 @@ final class LiveClaudeUsageSource: ClaudeUsageSource, @unchecked Sendable {
         let now = Date()
         let (decision, cached): (Decision, ClaudeLiveUsage?) = lock.withLock {
             if disabled { return (.disabled, nil) }
-            return (gate.shouldFetch(now: now, policy: policy) ? .fetch : .cached, lastGood)
+            if gate.shouldFetch(now: now, policy: policy) {
+                gate.lastAttemptAt = now   // F3: optimistický claim — serializuje souběžné fetchFresh
+                return (.fetch, lastGood)
+            }
+            return (.cached, lastGood)
         }
         switch decision {
         case .disabled: return nil
@@ -588,7 +592,11 @@ final class LiveCodexUsageSource: CodexUsageSource, @unchecked Sendable {
     func fetchFresh() async -> CodexSnapshot? {
         let now = Date()
         let (doFetch, cached): (Bool, CodexSnapshot?) = lock.withLock {
-            (gate.shouldFetch(now: now, policy: policy), lastGood)
+            if gate.shouldFetch(now: now, policy: policy) {
+                gate.lastAttemptAt = now   // F3: optimistický claim — serializuje souběžné fetchFresh
+                return (true, lastGood)
+            }
+            return (false, lastGood)
         }
         if !doFetch { return cached }
 
@@ -632,7 +640,10 @@ final class LiveCodexUsageSource: CodexUsageSource, @unchecked Sendable {
         var req = URLRequest(url: URL(string: "https://auth.openai.com/oauth/token")!)
         req.httpMethod = "POST"
         req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let form = "grant_type=refresh_token&client_id=app_EMoamEEZ73f0CkXaXp7hrann&refresh_token=\(refreshToken)"
+        // F1: refresh_token musí být percent-enkódovaný (může obsahovat +, /, =) — jinak rozbitý form body
+        var allowed = CharacterSet.alphanumerics; allowed.insert(charactersIn: "-._~")
+        let rt = refreshToken.addingPercentEncoding(withAllowedCharacters: allowed) ?? refreshToken
+        let form = "grant_type=refresh_token&client_id=app_EMoamEEZ73f0CkXaXp7hrann&refresh_token=\(rt)"
         req.httpBody = form.data(using: .utf8)
         req.timeoutInterval = 10
         guard let pair = try? await URLSession.shared.data(for: req),
@@ -719,5 +730,16 @@ Kód aditivní/nahrazující (žádná migrace dat). Rollback = `git revert`/`gi
 | R3 | LOW | L | throttle 5 min stále nad limitem → reziduální 429 | backoff 15 min to pohltí, last-good | mitigated |
 | R4 | LOW | L | concurrency souběžné fetchFresh | NSLock; 60s timer = sekvenční | mitigated |
 | R5 | LOW | L | token rotace | nový refresh_token zapsán zpět (jeden zdroj pravdy) | mitigated |
+| F1 | MED | M | Codex refresh form body neenkóduje refresh_token (+,/,=) → rozbitý request | percent-encoding refresh_tokenu (T4 S2) | fixed |
+| F3 | LOW | L | souběžné fetchFresh → dvojitý fetch/refresh (graceful, ale zbytečné) | optimistický `lastAttemptAt` claim v decision locku (T3/T4) | fixed |
 
-## Audit Trail (doplní plan-forge)
+## Audit Trail
+- **Lenses applied:** 1 red-team, 2 security, 3 assumptions, 4 dependencies, 5 alternatives, 6 cheap-executor, 7 goal-fit.
+- **Empirická verifikace (klíčová):** 17 Kit asercí (6 gate + 11 credential) + 1 PROBE dočasně přidáno (+ temp impl) a spuštěno `swift test` → **18/18 PASS**. Scratch revertnut, baseline zpět 92.
+- **PROBE výsledek (řeší obavu F2):** `JSONSerialization` serializuje velký celočíselný Double `expiresAt` (1.78e12) **jako integer** (`"expiresAt":1782383502676`, bez desetinné tečky) → Claude Code parser dostane správný integer formát; žádný fix nepotřeba. expiresAt jako `Double` v Kit mutaci je tedy bezpečné.
+- **Findings:** 0 CRIT, 0 HIGH, 2 MED (F1 Codex form-encoding — fixed; R1/R2 write-back/refresh-trust — mitigated/accepted), 3 LOW (F3 concurrency — fixed; R3/R4/R5 — mitigated). F2 (expiresAt formát) zrušeno probem.
+- **Alternativy (lens 5):** (a) throttle policy v Kitu (pure, tested) + stav v App class+NSLock *(zvoleno — riziková logika testovatelná, síť/credentials v App)*; (b) actor pro live source (reentrancy komplikace); (c) proaktivní JWT-exp check (víc kódu, Codex nemá expiry v auth.json). Refresh reaktivní na 401.
+- **Re-audit po hardeningu (R*):** none (F1/F3 fixy nezavedly nový defekt — F3 optimistic claim je idempotentní s `after(signal:)`).
+- **Tabletop dry run:** PASSED — build zelený po každém tasku (Kit 1/2 nezávislé; App 3 mění ClaudeKeychain enum + jeho jediný konzument LiveClaudeUsageSource ve stejném tasku; App 4 CodexAuth+LiveCodexUsageSource; 5 verze). Identifikátory (`LiveGateState`, `LiveFetchSignal`, `ClaudeRefreshParse`/`ClaudeCredentialUpdate`/`CodexRefreshParse`/`CodexAuthUpdate`, `ClaudeKeychain.update`/`currentBlob`, `CodexAuth.write`/`currentJSON`) konzistentní napříč tasky. Bezpečnostní řetěz zápisu: refresh úspěch → Kit mutace (zachová strukturu, tested) → round-trip validace → atomický zápis/SecItemUpdate; selhání kdekoli → žádný zápis → fallback.
+- **Rozhodnutí:** spuštěno s defaulty dle delegace („prožeň to celé"); F1/F3 fixy aplikovány autonomně (jasné, bez value-judgmentu); kill criterion (Kit testy nezelené po 2 pokusech / round-trip validace nefunkční → stop) v Guardrails.
+- **K hlídání během exekuce:** R2 (refresh endpointy ne-live-testované) — degraduje gracefully; R1 (write-back) — nejvyšší pozornost reviewera na round-trip + atomicitu; reálný refresh nastane až token vyprší a Claude Code/Codex neběží (uživatel ověří v čase).
