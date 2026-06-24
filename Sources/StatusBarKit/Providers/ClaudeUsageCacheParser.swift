@@ -12,6 +12,7 @@ public enum ClaudeUsageCacheParser {
     }
     private struct Scope: Decodable { let model: Model? }
     private struct Model: Decodable { let display_name: String? }
+    private struct APIResponse: Decodable { let limits: [LimitEntry] }
 
     private static func parseDate(_ s: String?) -> Date? {
         guard let s else { return nil }
@@ -20,9 +21,8 @@ public enum ClaudeUsageCacheParser {
         return f.date(from: s) ?? ISO8601DateFormatter().date(from: s)
     }
 
-    public static func parse(_ data: Data) throws -> ProviderUsage {
-        let cache = try JSONDecoder().decode(Cache.self, from: data)
-        let windows: [UsageWindow] = cache.data.limits.compactMap { e in
+    private static func windows(from limits: [LimitEntry]) -> [UsageWindow] {
+        limits.compactMap { e in
             let kind: WindowKind
             switch e.kind {
             case "session":       kind = .rolling5h
@@ -32,8 +32,17 @@ public enum ClaudeUsageCacheParser {
             }
             return UsageWindow(kind: kind, usedFraction: e.percent / 100.0, resetAt: parseDate(e.resets_at))
         }
+    }
+
+    public static func parse(_ data: Data) throws -> ProviderUsage {
+        let cache = try JSONDecoder().decode(Cache.self, from: data)
         return ProviderUsage(providerId: .claudeCode, displayName: "Claude Code", planLabel: nil,
-                             windows: windows, status: .ok,
+                             windows: windows(from: cache.data.limits), status: .ok,
                              lastUpdated: Date(timeIntervalSince1970: cache.timestamp))
+    }
+
+    /// Parse top-level odpovědi živého API (`{limits:[…]}`, bez timestamp/data wrapperu).
+    public static func parseAPIWindows(_ data: Data) throws -> [UsageWindow] {
+        windows(from: try JSONDecoder().decode(APIResponse.self, from: data).limits)
     }
 }
