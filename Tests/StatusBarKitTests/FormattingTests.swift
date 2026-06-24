@@ -38,10 +38,10 @@ import Foundation
 
 @Test func popiskyOken() {
     let cs = L10n.bundle("cs"); let en = L10n.bundle("en")
-    #expect(WindowLabel.text(for: .rolling5h, bundle: cs) == "5h okno")
+    #expect(WindowLabel.text(for: .rolling5h, bundle: cs) == "Relace")
     #expect(WindowLabel.text(for: .weekly(scope: nil), bundle: cs) == "Týden")
-    #expect(WindowLabel.text(for: .weekly(scope: "Sonnet"), bundle: cs) == "Týden · Sonnet")
-    #expect(WindowLabel.text(for: .rolling5h, bundle: en) == "5h window")
-    #expect(WindowLabel.text(for: .weekly(scope: nil), bundle: en) == "Week")
-    #expect(WindowLabel.text(for: .weekly(scope: "Sonnet"), bundle: en) == "Week · Sonnet")
+    #expect(WindowLabel.text(for: .weekly(scope: "Sonnet"), bundle: cs) == "Sonnet")
+    #expect(WindowLabel.text(for: .rolling5h, bundle: en) == "Session")
+    #expect(WindowLabel.text(for: .weekly(scope: nil), bundle: en) == "Weekly")
+    #expect(WindowLabel.text(for: .weekly(scope: "Sonnet"), bundle: en) == "Sonnet")
 }

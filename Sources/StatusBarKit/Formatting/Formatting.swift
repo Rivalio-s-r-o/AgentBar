@@ -83,10 +83,10 @@ public enum WindowLabel {
     public static func text(for kind: WindowKind, bundle: Bundle? = nil) -> String {
         let b = bundle ?? .module
         switch kind {
-        case .rolling5h: return NSLocalizedString("window.5h", bundle: b, comment: "5h rolling window")
-        case .weekly(let s):
-            if let s { return String(format: NSLocalizedString("window.week.scope", bundle: b, comment: "Week · scope"), s) }
-            return NSLocalizedString("window.week", bundle: b, comment: "Week")
+        case .rolling5h: return NSLocalizedString("window.session", bundle: b, comment: "5h rolling window")
+        case .weekly(let scope):
+            if let scope { return scope }   // scoped weekly = jen název modelu (nepřekládá se)
+            return NSLocalizedString("window.weekly", bundle: b, comment: "weekly window")
         }
     }
 }

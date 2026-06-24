@@ -11,9 +11,8 @@
 
 "reset.now" = "now";
 
-"window.5h" = "5h window";
-"window.week" = "Week";
-"window.week.scope" = "Week · %@";
+"window.session" = "Session";
+"window.weekly" = "Weekly";
 
 "style.dotPercent" = "Dot + %";
 "style.labelPercent" = "Label + %";

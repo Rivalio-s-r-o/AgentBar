@@ -11,9 +11,8 @@
 
 "reset.now" = "teď";
 
-"window.5h" = "5h okno";
-"window.week" = "Týden";
-"window.week.scope" = "Týden · %@";
+"window.session" = "Relace";
+"window.weekly" = "Týden";
 
 "style.dotPercent" = "Tečka + %";
 "style.labelPercent" = "Štítek + %";
