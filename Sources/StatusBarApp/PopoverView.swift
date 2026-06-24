@@ -126,8 +126,15 @@ private struct ProviderCard: View {
                 }
                 // Fuel-gauge: bar = kolik zbývá; barva podle nebezpečí (málo zbývá → červená)
                 ProgressView(value: max(0.0, min(1.0, 1 - w.usedFraction))).tint(UsageColor.color(forFraction: w.usedFraction))
-                if let d = PaceCalculator.pace(window: w, now: Date()) {
-                    Text(String(format: NSLocalizedString("popover.pace", bundle: .module, comment: ""), PaceLabel.text(deltaPercent: d))).font(.caption2).foregroundStyle(.tertiary)
+                let paceText = PaceCalculator.pace(window: w, now: Date()).map { PaceLabel.text(deltaPercent: $0) }
+                let burn = BurnRateCalculator.project(window: w, now: Date())
+                let burnText = burn.map { BurnRateLabel.text($0) }
+                let exhausting = burn?.timeToExhaustion != nil
+                let clauses = [paceText, burnText].compactMap { $0 }
+                if !clauses.isEmpty {
+                    Text(String(format: NSLocalizedString("popover.pace", bundle: .module, comment: ""), clauses.joined(separator: " · ")))
+                        .font(.caption2)
+                        .foregroundStyle(exhausting ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
                 }
             }
         }
