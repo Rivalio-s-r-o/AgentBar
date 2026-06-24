@@ -71,3 +71,30 @@ private final class TogglingTodayStub: UsageProvider, @unchecked Sendable {
     await coord.refreshNow(includeToday: false)   // background → cache prázdná → today nil (žádný stale)
     #expect(store.providers[.claudeCode]?.today == nil)
 }
+
+// 1. volání: .ok + today; 2. volání: .unavailable (zmizela cache)
+private final class VanishingStub: UsageProvider, @unchecked Sendable {
+    let id: ProviderID
+    private let lock = NSLock()
+    private var calls = 0
+    init(id: ProviderID) { self.id = id }
+    func fetch(includeToday: Bool) async -> ProviderUsage {
+        let n = lock.withLock { calls += 1; return calls }
+        if n == 1 {
+            return ProviderUsage(providerId: id, displayName: id.rawValue, planLabel: nil,
+                windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.5, resetAt: nil)],
+                status: .ok, lastUpdated: Date(),
+                today: TodayUsage(perModel: [ModelTokens(modelName: "x", tokens: TokenUsage(input: 100))], estimatedCost: 1))
+        }
+        return .unavailable(id, displayName: id.rawValue, reason: "zmizela cache", now: Date())
+    }
+}
+
+@MainActor @Test func unavailableNedostaneStaleToday() async {
+    let store = UsageStore()
+    let coord = RefreshCoordinator(store: store, providers: [VanishingStub(id: .claudeCode)])
+    await coord.refreshNow(includeToday: true)    // .ok + today → cache
+    #expect(store.providers[.claudeCode]?.today != nil)
+    await coord.refreshNow(includeToday: false)   // .unavailable → cached today se NEpřilepí (hlavička by jinak počítala stale)
+    #expect(store.providers[.claudeCode]?.today == nil)
+}
