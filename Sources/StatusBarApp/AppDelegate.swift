@@ -28,8 +28,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         settings = SettingsWindowController(onRequestNotificationPermission: { [weak self] in
             self?.notifier.requestAuthorizationIfNeeded()
+        }, onAppearanceChanged: { [weak self] in
+            self?.menuBar?.applyAppearance()
         })
-        menuBar = MenuBarController(store: store, onClick: { [weak self] in
+        menuBar = MenuBarController(store: store, prefs: prefs, onClick: { [weak self] in
             Task { await self?.coordinator.refreshNow(includeToday: true) }   // popover/refresh → skenuj today
         }, onOpenSettings: { [weak self] in
             self?.settings.show()

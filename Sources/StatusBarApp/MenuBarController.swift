@@ -6,15 +6,17 @@ import StatusBarKit
 @MainActor
 final class MenuBarController {
     private let store: UsageStore
+    private let prefs: PreferencesStore
     private let onRefresh: () -> Void
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private var cancellable: AnyCancellable?
 
     private let onOpenSettings: () -> Void
-    init(store: UsageStore, onClick: @escaping () -> Void,
+    init(store: UsageStore, prefs: PreferencesStore, onClick: @escaping () -> Void,
          onOpenSettings: @escaping () -> Void = {}) {
         self.store = store
+        self.prefs = prefs
         self.onRefresh = onClick
         self.onOpenSettings = onOpenSettings
         render(store.orderedUsages)
@@ -33,6 +35,9 @@ final class MenuBarController {
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
     }
+
+    /// Překreslí lištu po změně stylu/významu % v Nastavení.
+    func applyAppearance() { render(store.orderedUsages) }
 
     @objc private func togglePopover() {
         guard let b = statusItem.button else { return }
@@ -54,12 +59,25 @@ final class MenuBarController {
         }
     }
     private func render(_ usages: [ProviderUsage]) {
-        let segs = MenuBarTitleBuilder.segments(for: usages)
+        let segs = MenuBarTitleBuilder.segments(for: usages,
+                                                style: prefs.barStyle,
+                                                showUsedPercent: prefs.showUsedPercent)
         let title = NSMutableAttributedString()
         for (i, s) in segs.enumerated() {
             if i > 0 { title.append(NSAttributedString(string: "  ")) }
-            title.append(NSAttributedString(string: "● ", attributes: [.foregroundColor: dotColor(s.providerId), .font: NSFont.systemFont(ofSize: 9)]))
-            title.append(NSAttributedString(string: s.text, attributes: [.foregroundColor: levelColor(s.level), .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)]))
+            switch s.leading {
+            case .providerDot:
+                title.append(NSAttributedString(string: "● ", attributes: [.foregroundColor: dotColor(s.providerId), .font: NSFont.systemFont(ofSize: 9)]))
+            case .levelDot:
+                title.append(NSAttributedString(string: "● ", attributes: [.foregroundColor: levelColor(s.level), .font: NSFont.systemFont(ofSize: 9)]))
+            case .label(let txt):
+                title.append(NSAttributedString(string: "\(txt) ", attributes: [.foregroundColor: levelColor(s.level), .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)]))
+            case .none:
+                break
+            }
+            if !s.text.isEmpty {
+                title.append(NSAttributedString(string: s.text, attributes: [.foregroundColor: levelColor(s.level), .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)]))
+            }
         }
         if segs.isEmpty { title.append(NSAttributedString(string: "StatusBar")) }
         statusItem.button?.attributedTitle = title
