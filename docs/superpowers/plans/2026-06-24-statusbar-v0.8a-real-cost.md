@@ -293,4 +293,12 @@ Aditivní (estimateReal + testy + verze). Rollback = `git revert`/`git checkout 
 | R2 | LOW | L | `estimateReal` mění semantiku `estimatedCost` → exaktní test | žádný test neasertuje exaktní scanner cenu; plná `estimate` zachována+testována | fixed |
 | R3 | LOW | M | error-path test odhalí reálný bug v parseru | Guardrails stop-and-report; eskalovat při neshodě se specem | mitigated |
 
-## Audit Trail (doplní plan-forge)
+## Audit Trail
+- **Lenses applied:** 1 red-team, 2 security (N/A — jen testy + pricing math, žádné secrets/síť/destruktivní operace), 3 assumptions, 4 dependencies, 5 alternatives, 6 cheap-executor, 7 goal-fit.
+- **Empirická verifikace (klíčová):** všech 14 plánovaných asercí (3× estimateReal + 11 error-path) bylo dočasně přidáno do scratch test souboru (+ temp estimateReal) a spuštěno `swift test` proti reálnému kódu → **14/14 PASS**. Tím je vyloučeno nejvyšší riziko testově-těžkého plánu (chybné očekávání). Scratch revertnut, strom čistý, baseline zpět na 78.
+- **Alternativy (lens 5):** (a) `estimateReal` jako samostatná funkce + `estimatedCost` field drží reálnou cenu *(zvoleno — minimální ripple, popover beze změny, plná `estimate` zachována)*; (b) parametr `includeCache` na `estimate` (méně čitelné call-sites); (c) přejmenovat field na `estimatedRealCost` (ripple do PopoverView). 
+- **Findings:** 0 CRIT, 0 HIGH, 0 MED, 1 LOW (scanner-switch `>0` ověřen reasoningem, ne spuštěním — fixtury mají input/output > 0; Task 1 Step 7 potvrdí). 
+- **Re-audit po hardeningu (R*):** none.
+- **Tabletop dry run:** PASSED — build zelený po každém tasku (Task 1 aditivní estimateReal; Task 2 jen testy + verze); Task 2 nezávislý na Task 1; identifikátory konzistentní (`estimateReal`, `estimate`, `PricingTable.pricing`, `estimatedCost` field nezměněn).
+- **Rozhodnutí:** spuštěno s defaulty dle uživatelovy delegace („můžeš to prohnat"); 0 nálezů k rozhodnutí; kill criterion (Task 1 testy nezelené po 2 pokusech → stop) v Guardrails.
+- **K hlídání:** vizuál nižší reálné ceny (ověří uživatel); error-path test by mohl odhalit reálný bug v parseru → Guardrails stop-and-report (žádný se ale při verifikaci neprojevil).
