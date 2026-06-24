@@ -33,8 +33,7 @@ struct PopoverView: View {
             } else {
                 ForEach(store.orderedUsages, id: \.providerId) { ProviderCard(usage: $0); Divider() }
             }
-            if store.orderedUsages.isEmpty { Divider() }   // jinak už divider dává ForEach za poslední kartou
-            Divider()
+            if store.orderedUsages.isEmpty { Divider() }   // jediný oddělovač před odkazy; jinak ho dává ForEach za poslední kartou
             VStack(alignment: .leading, spacing: 6) {
                 linkButton("Stav Anthropic", "https://status.anthropic.com")
                 linkButton("Stav OpenAI", "https://status.openai.com")
