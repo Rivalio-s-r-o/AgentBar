@@ -5,10 +5,7 @@ struct PopoverView: View {
     @ObservedObject var store: UsageStore
     let onRefresh: () -> Void
     let onQuit: () -> Void
-    var onRequestNotificationPermission: () -> Void = {}
-
-    @AppStorage(PreferenceKeys.notificationsEnabled) private var notifsEnabled = false
-    @AppStorage(PreferenceKeys.remainingThresholdPercent) private var threshold = 10
+    var onOpenSettings: () -> Void = {}
 
     private var dnesCelkem: Decimal {
         store.orderedUsages.compactMap { $0.today?.estimatedCost }.reduce(Decimal(0), +)
@@ -31,21 +28,11 @@ struct PopoverView: View {
                 ForEach(store.orderedUsages, id: \.providerId) { ProviderCard(usage: $0); Divider() }
             }
             if store.orderedUsages.isEmpty { Divider() }   // jinak už divider dává ForEach za poslední kartou
-            HStack(spacing: 6) {
-                Toggle(isOn: $notifsEnabled) {
-                    Text("Upozornit při zbývajících ≤").font(.caption)
-                }.toggleStyle(.switch).controlSize(.mini)
-                Picker("", selection: $threshold) {
-                    ForEach([5, 10, 15, 20], id: \.self) { Text("\($0) %").tag($0) }
-                }.labelsHidden().frame(width: 72)
+            HStack {
+                Button("Nastavení…", action: onOpenSettings).buttonStyle(.borderless).font(.caption)
                 Spacer()
-            }
-            .padding(.horizontal, 14).padding(.vertical, 6)
-            .onChange(of: notifsEnabled) { _, isOn in
-                if isOn { onRequestNotificationPermission() }
-            }
-            HStack { Spacer(); Button("Konec", action: onQuit).buttonStyle(.borderless).font(.caption) }
-                .padding(.horizontal, 14).padding(.vertical, 8)
+                Button("Konec", action: onQuit).buttonStyle(.borderless).font(.caption)
+            }.padding(.horizontal, 14).padding(.vertical, 8)
         }.frame(width: 320)
     }
 }

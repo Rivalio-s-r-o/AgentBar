@@ -11,12 +11,12 @@ final class MenuBarController {
     private let popover = NSPopover()
     private var cancellable: AnyCancellable?
 
-    private let onRequestNotificationPermission: () -> Void
+    private let onOpenSettings: () -> Void
     init(store: UsageStore, onClick: @escaping () -> Void,
-         onRequestNotificationPermission: @escaping () -> Void = {}) {
+         onOpenSettings: @escaping () -> Void = {}) {
         self.store = store
         self.onRefresh = onClick
-        self.onRequestNotificationPermission = onRequestNotificationPermission
+        self.onOpenSettings = onOpenSettings
         render(store.orderedUsages)
         cancellable = store.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { [weak self] in
@@ -27,7 +27,7 @@ final class MenuBarController {
         popover.behavior = .transient
         let hosting = NSHostingController(rootView:
             PopoverView(store: store, onRefresh: onClick, onQuit: { NSApp.terminate(nil) },
-                        onRequestNotificationPermission: onRequestNotificationPermission))
+                        onOpenSettings: onOpenSettings))
         hosting.sizingOptions = .preferredContentSize   // popover se přizpůsobí výšce obsahu (nic se neořízne)
         popover.contentViewController = hosting
         statusItem.button?.target = self

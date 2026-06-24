@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastAlerted: Set<AlertKey> = []
     private var coordinator: RefreshCoordinator!
     private var menuBar: MenuBarController!
+    private var settings: SettingsWindowController!
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -22,10 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.lastAlerted = newState
             self.notifier.post(toFire)
         }
+        settings = SettingsWindowController(onRequestNotificationPermission: { [weak self] in
+            self?.notifier.requestAuthorizationIfNeeded()
+        })
         menuBar = MenuBarController(store: store, onClick: { [weak self] in
             Task { await self?.coordinator.refreshNow() }
-        }, onRequestNotificationPermission: { [weak self] in
-            self?.notifier.requestAuthorizationIfNeeded()
+        }, onOpenSettings: { [weak self] in
+            self?.settings.show()
         })
         Task { await coordinator.refreshNow() }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
