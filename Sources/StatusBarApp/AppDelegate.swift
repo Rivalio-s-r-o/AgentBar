@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         coordinator = RefreshCoordinator(store: store, providers: [
             ClaudeCodeCollector(liveSource: LiveClaudeUsageSource()),
-            CodexCollector(),
+            CodexCollector(liveSource: LiveCodexUsageSource()),
         ])
         coordinator.onRefreshed = { [weak self] usages in
             guard let self, self.prefs.notificationsEnabled else { return }
