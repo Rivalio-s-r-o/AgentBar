@@ -107,3 +107,26 @@ import Foundation
     let r = try #require(ClaudeTokenScanner(projectsDir: tmp).rangeUsage(start: start, end: day20))
     #expect(r.total.realTokens == 100)            // řádek beforeWindow (555) odfiltrován parserem
 }
+
+@Test func claudeRangeUsageMergePřesVíceSouborů() throws {
+    let cal = Calendar.current
+    var c = DateComponents(); c.year = 2026; c.month = 6; c.day = 20; c.hour = 12
+    let day = cal.date(from: c)!
+    let start = cal.date(byAdding: .day, value: -30, to: day)!
+    let inWindow = cal.date(byAdding: .day, value: -5, to: day)!
+    let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("claudeMerge-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    // 5 souborů, každý 100 input + 50 output stejného modelu → součet 500/250
+    for n in 0..<5 {
+        let f = tmp.appendingPathComponent("s\(n).jsonl")
+        try """
+        {"type":"assistant","timestamp":"\(iso.string(from: inWindow))","message":{"model":"claude-opus-4-8","usage":{"input_tokens":100,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+        """.data(using: .utf8)!.write(to: f)
+        try FileManager.default.setAttributes([.modificationDate: inWindow], ofItemAtPath: f.path)
+    }
+    let r = try #require(ClaudeTokenScanner(projectsDir: tmp).rangeUsage(start: start, end: day))
+    #expect(r.perModel.count == 1)
+    #expect(r.total.realTokens == 750)   // 5 × (100+50) — paralelní merge musí sečíst vše
+}

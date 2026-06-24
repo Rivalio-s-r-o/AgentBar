@@ -19,8 +19,6 @@ public struct CodexTokenScanner: Sendable {
     /// Sečte Codex tokeny přes session soubory s mtime v [start, end). Finální `lastTotal` per soubor.
     /// POZN. (R5, akceptováno): kumulativní total → session přes hranici okna přičte i tokeny mimo rozsah.
     public func rangeUsage(start: Date, end: Date) -> TodayUsage? {
-        var sum = TokenUsage.zero
-        var any = false
         guard let en = FileManager.default.enumerator(at: sessionsDir,
             includingPropertiesForKeys: [.contentModificationDateKey]) else { return nil }
         var files: [(URL, Date)] = []
@@ -30,13 +28,27 @@ public struct CodexTokenScanner: Sendable {
                 files.append((url, m))
             }
         }
-        for (url, _) in files.sorted(by: { $0.1 > $1.1 }).prefix(maxFilesToScan) {
-            guard let data = try? Data(contentsOf: url),
-                  let t = CodexTokenParser.lastTotal(fromJSONL: data) else { continue }
-            sum = sum + t; any = true
+        let urls = files.sorted(by: { $0.1 > $1.1 }).prefix(maxFilesToScan).map(\.0)
+        guard !urls.isEmpty else { return nil }
+
+        let acc = TokenSumAccumulator()
+        DispatchQueue.concurrentPerform(iterations: urls.count) { i in
+            guard let data = try? Data(contentsOf: urls[i]),
+                  let t = CodexTokenParser.lastTotal(fromJSONL: data) else { return }
+            acc.add(t)
         }
+        let (sum, any) = acc.snapshot()
         guard any else { return nil }
         let perModel = [ModelTokens(modelName: "codex", tokens: sum)]
         return TodayUsage(perModel: perModel, estimatedCost: PricingEstimator.estimateReal(perModel))
     }
+}
+
+/// Thread-safe součet TokenUsage z paralelního skenu.
+final class TokenSumAccumulator: @unchecked Sendable {
+    private let lock = NSLock()
+    private var sum = TokenUsage.zero
+    private var any = false
+    func add(_ t: TokenUsage) { lock.lock(); sum = sum + t; any = true; lock.unlock() }
+    func snapshot() -> (TokenUsage, Bool) { lock.lock(); defer { lock.unlock() }; return (sum, any) }
 }
