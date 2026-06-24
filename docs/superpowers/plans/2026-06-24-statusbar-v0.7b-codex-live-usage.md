@@ -256,13 +256,12 @@ private struct FakeCodexSource: CodexUsageSource {
 }
 ```
 
-Zároveň v témže souboru **aktualizuj stávající assertion** v testu `collectorPřeskočíNejnovějšíNullSessionAVezmeStarší`:
+Zároveň v témže souboru **aktualizuj stávající assertion** v testu `collectorPřeskočíNejnovějšíNullSessionAVezmeStarší` (F1 — přesná náhrada jediné řádky):
 
-```swift
-    #expect(u.planLabel == "Plus")
-```
+- Najdi řádku (cca ř. 22): `    #expect(u.planLabel == "plus")`
+- Nahraď ji za: `    #expect(u.planLabel == "Plus")`
 
-(původně `== "plus"` — `CodexPlan.label` teď mapuje na „Plus").
+Důvod: `CodexPlan.label` teď v collectoru mapuje `"plus"` → `"Plus"`. (NEměň `CodexRateLimitParserTests`, který testuje `snap.planType == "plus"` na PARSERU — ten zůstává raw a zelený.)
 
 - [ ] **Step 3: Spusť testy — musí selhat**
 
@@ -474,7 +473,19 @@ Aditivní featura (nový kód + napojení live zdroje, žádná migrace). Rollba
 ## Risk Register
 | ID | Severity | Likelihood | Risk | Mitigace (krok) | Resolution |
 |----|----------|------------|------|-----------------|------------|
-| R1 | MED | M | endpoint/token nedostupné za běhu | fallback na JSONL (T2 S4), nikdy pád | mitigated |
-| R2 | LOW | L | WAF blokne i wham/usage | ≠200 → nil → fallback (LiveCodexUsageSource) | mitigated |
+| R1 | MED | M | endpoint/token nedostupné za běhu (expiry, offline) | fallback na JSONL (T2 S4), nikdy pád | mitigated |
+| R2 (F4) | LOW | L | WAF blokne wham/usage / hardcoded `User-Agent` zastará | ≠200 → nil → fallback; UA verzovaný v LiveCodexUsageSource | mitigated |
 | R3 | LOW | L | auth.json schéma se změní | CodexAuth vrátí nil → fallback | mitigated |
 | R4 | LOW | M | retrofit CodexPlan.label „plus"→„Plus" rozbije test | CodexCollectorTests assertion aktualizován na „Plus" (T2 S2); parser test zůstává raw | fixed |
+| F2 | LOW | M | každý 60s background refresh nově volá i chatgpt.com (navíc k api.anthropic.com) | malý GET, off-main (RefreshCoordinator), neblokuje UI; stejný profil jako v0.6 | accepted |
+| F3 | LOW | L | spike zachytil 1 odpověď (nízká spotřeba); tvar při `limit_reached`/jiném plánu neověřen | parser defenzivní (vše optional → nil → fallback); reálný runtime ověří uživatel | accepted |
+
+## Audit Trail
+- **Lenses applied:** 1 red-team, 2 security (token/account_id jen in-memory, nikde nelogován, jen vlastní endpoint přes TLS — clean), 3 assumptions, 4 dependencies, 5 alternatives, 6 cheap-executor, 7 goal-fit.
+- **Ověřeno tooly:** Package.swift `.copy("Fixtures")` → nová fixtura se auto-zabundluje (jako `claude-api-usage.json`); jediný Codex planLabel assertion je `CodexCollectorTests:22` (potvrzeno grepem — žádný skrytý konzument); endpoint+auth+tvar = spike HTTP 200; `CodexSnapshot` je Equatable (pro `== nil` v testech).
+- **Alternativy (lens 5):** (a) dedikovaný `wham/usage` GET *(zvoleno — spike-ověřeno, lehké)*; (b) parsovat rate_limits z chat/responses SSE (`token_count`) — vyžaduje zahájit session, těžké; (c) status quo (jen JSONL) — zastaralé. CodexPlan.label aplikován v collectoru (ne parseru) → parser test zůstává zelený, uniformní label na obou cestách.
+- **Findings:** 0 CRIT, 0 HIGH, 0 MED, 4 LOW (F1–F4) → F1 fixnuto (přesné old→new), F2/F3 accepted (Risk Register), F4 mitigated (R2).
+- **Re-audit po hardeningu (R*):** none.
+- **Tabletop dry run:** PASSED — build zelený po každém tasku (nové soubory v T1; defaultovaný `liveSource` param v T2 → `CodexCollector()` v App stále kompiluje; T3 napojení); `today`-nahoře v collectoru gated `includeToday` (laziness drží, existující testy `includeToday:false`); identifikátory (`CodexSnapshot`, `CodexUsageAPIParser.parse`, `CodexPlan.label`, `CodexUsageSource.fetchFresh`, `CodexAuth.read`) konzistentní napříč tasky.
+- **Rozhodnutí uživatele (CP2):** 1A opravit F1–F4; 2A kill criterion aktivní.
+- **K hlídání:** reálný runtime request (živý token + fresh číslo v liště) = ověří uživatel; WAF/UA stabilita endpointu.
