@@ -19,8 +19,17 @@
 - Status `.degraded` se v liště chová jako `.ok` (zobrazí číslo ze svých `windows`); jen `.unavailable` → `"—"`.
 - Krátké štítky providerů (styl B): `claudeCode → "CC"`, `codex → "CX"`.
 - České UI texty s diakritikou.
+- **Sdílený kontrakt prefs (F4):** UI (`@AppStorage` v `SettingsView`) a Kit (`PreferencesStore`) čtou/píšou TYTÉŽ klíče — obě strany VŽDY přes konstanty `PreferenceKeys.*` (žádné string-literály). Encoding musí sednout: `barStyle` = `rawValue` String, `showUsedPercent` = `Bool`. Obě strany běží nad `UserDefaults.standard` (`@AppStorage` default i `PreferencesStore()` v `AppDelegate` bez argumentu).
 - Bundle verze → `0.7` (`Resources/Info.plist`, obě pole).
+- **Testy jsou volné `@Test func` bez `@Suite`/typu (F1):** `swift test --filter <NázevSouboru>` NEMATCHNE nic → ověřuj VŽDY plným `swift test`, nikdy ne `--filter` na jméno souboru.
 - TDD, časté commity, DRY, YAGNI.
+
+## Guardrails
+
+- **Zakázané akce:** neměnit chování při defaultních prefs (styl A + zbývající %); nesahat na `~/.claude`/`~/.codex`; `StatusBarKit` nesmí dostat `import AppKit`/`SwiftUI`/`Security`/síť; nepřejmenovávat/neměnit encoding stávajících `PreferenceKeys` (rozbilo by uložené prefs uživatele).
+- **Žádná nevratná operace** — featura jen přidává kód + dvě UserDefaults klíče; rollback = `git revert`/`git checkout`.
+- **Stop podmínky:** selže-li ověření kroku, postupuj dle „On failure" daného kroku; nikdy neimprovizuj náhradní API.
+- **Kill criterion (F3, schváleno CP2):** když Task 1 Kit unit testy nejdou zezelenat ani po 2 pokusech implementera, NEBO `@AppStorage<MenuBarStyle>` i String-rawValue fallback (viz Task 3 Step 2) oba selžou kompilací → ZASTAV celý plán a nahlas uživateli; nepokračuj na další tasky.
 
 ---
 
@@ -136,6 +145,8 @@ public enum MenuBarTitleBuilder {
     }
 }
 ```
+
+> **Pozn. (F6):** `pool.max(by: { $0.nearestLimitPercent < $1.nearestLimitPercent })` při shodě (oba providery stejně vyčerpané) vrací **prvního** v pořadí (Swift `max(by:)` neaktualizuje výsledek na ne-rostoucí porovnání) — deterministické, Claude před Codexem. Testy používají rozdílná % (42 vs 92), takže tie-break neovlivní rovnosti.
 
 - [ ] **Step 4: Napiš testy v `MenuBarStyleTests.swift`**
 
@@ -297,8 +308,9 @@ Přidej do `Tests/StatusBarKitTests/PreferencesStoreTests.swift` (na konec soubo
 
 - [ ] **Step 2: Spusť testy — musí selhat (vlastnosti ještě neexistují)**
 
-Run: `swift test --filter PreferencesStoreTests`
-Expected: FAIL (kompilace: `value of type 'PreferencesStore' has no member 'barStyle'`).
+Run: `swift test`
+Expected: FAIL — kompilace celého test targetu selže: `value of type 'PreferencesStore' has no member 'barStyle'`.
+(Pozn. F1: NEpoužívej `--filter NázevSouboru` — testy jsou volné `@Test func` bez typu, filtr by nematchnul nic a vrátil falešný PASS.)
 
 - [ ] **Step 3: Rozšiř `PreferencesStore.swift`**
 
@@ -324,8 +336,8 @@ a do `struct PreferencesStore` (za `remainingThresholdPercent`) tyto vlastnosti:
 
 - [ ] **Step 4: Spusť testy — musí projít**
 
-Run: `swift test --filter PreferencesStoreTests`
-Expected: PASS (5 testů — 2 stávající + 3 nové).
+Run: `swift test`
+Expected: PASS — celý balík zelený, vč. 5 testů v `PreferencesStoreTests.swift` (2 stávající + 3 nové).
 
 - [ ] **Step 5: Ověř celý balík**
 
@@ -449,7 +461,9 @@ V `Sources/StatusBarApp/SettingsView.swift`:
     @AppStorage(PreferenceKeys.showUsedPercent) private var showUsedPercent = false
 ```
 
-(c) Vlož novou sekci do `body` mezi blok „Spouštět při přihlášení" a první `Divider()` (tj. před sekci Upozornění přidej sekci + Divider):
+> **Pozn. (F3) — předpoklad ověřený buildem (Step 6):** `@AppStorage` s `MenuBarStyle` funguje, protože je to `RawRepresentable` s `RawValue == String` (SwiftUI má `init(wrappedValue:_:)` pro tento případ; tentýž soubor už `@AppStorage` s default hodnotami používá pro `Bool`/`Int`). **Pokud `swift build` v Step 6 selže na `@AppStorage<MenuBarStyle>`**, použij fallback: `@AppStorage(PreferenceKeys.barStyle) private var barStyleRaw: String = MenuBarStyle.dotPercent.rawValue`, v Pickeru taguj `String` (`.tag(s.rawValue)` přes `ForEach(MenuBarStyle.allCases…)`) a v `onChange` volej `onAppearanceChanged()`. `PreferencesStore.barStyle` čte stejný String klíč, takže Kit zůstává beze změny. Selže-li i fallback kompilací → kill criterion (sekce Guardrails).
+
+(c) Vlož novou sekci do `body` **bezprostředně za blok `Toggle("Spouštět při přihlášení")` včetně jeho `.onChange(of: launchAtLogin){…}`** a **před stávající `Divider()`** (který odděluje sekci Upozornění). Vkládaný blok začíná vlastním `Divider()`, takže výsledně budou dva oddělovače: launch → `Divider` → „Zobrazení lišty" → stávající `Divider` → „Upozornění":
 
 ```swift
             Divider()
@@ -551,11 +565,13 @@ V `Resources/Info.plist` změň obě pole na `0.7`:
 Run: `swift build && swift test`
 Expected: Build complete; všechny testy PASS.
 
-- [ ] **Step 7: Smoke — postav .app a spusť (vizuál ověří uživatel)**
+- [ ] **Step 7: Postav `.app` artefakt a předej uživateli (NEspouštět GUI)**
 
-Run: `bash scripts/make-app.sh` (pokud existuje) a spusť výslednou `.app`.
-Expected: lišta naběhne ve stylu A se zbývajícími % (jako dřív). V okně Nastavení je sekce „Zobrazení lišty" se 4 styly a přepínačem Zbývající/Vyčerpané; změna se okamžitě projeví v liště.
-Pozn.: vizuální potvrzení je na uživateli; agent ověří jen čistý build a běh bez pádu.
+Run: `bash scripts/make-app.sh`
+Expected: skript doběhne s exit 0 a vyrobí `.app` bundle (ověř `echo $?` == 0 a existenci výsledné `.app` cesty, kterou skript vypíše / je v repo konvenci).
+**Brána (mechanická, agent):** jediný automatický gate je Step 6 (`swift build && swift test` zelené) + tento Step 7 (make-app.sh exit 0). **Agent NESMÍ spouštět výslednou `.app`** (GUI proces by visel / nelze headless ověřit) — jen ji postaví a nahlásí cestu.
+**Vizuální ověření (uživatel, GAP):** uživatel spustí `.app` a potvrdí: lišta naběhne ve stylu A se zbývajícími % (jako dřív); v Nastavení je sekce „Zobrazení lišty" se 4 styly + přepínač Zbývající/Vyčerpané; změna se okamžitě projeví v liště.
+On failure: selže-li `make-app.sh` (exit ≠ 0), nahlas výstup skriptu a ZASTAV — neimprovizuj ruční sestavení bundlu.
 
 - [ ] **Step 8: Commit**
 
@@ -570,3 +586,25 @@ git commit -m "feat: styly lišty v Nastavení + render podle Leading + verze 0.
 - `swift build` čistý (Kit + App), `swift test` zelený (stávající + ~14 nových testů).
 - Default chování (žádný uložený pref) = styl A + zbývající % = bajt-za-bajt jako v0.6.
 - GAP (ověří uživatel): vizuál stylů B/C/D a okamžité překreslení po změně v Nastavení.
+
+## Rollback & Recovery
+Featura je čistě aditivní (nový kód + 2 UserDefaults klíče, žádná migrace dat). Rollback = `git revert` příslušných commitů nebo `git checkout main -- <soubory>`. Uložené prefs `barStyle`/`showUsedPercent` jsou neškodné i bez kódu (ignorované). Žádná nevratná operace.
+
+## Risk Register
+| ID | Severity | Likelihood | Risk | Mitigace (krok) | Resolution |
+|----|----------|------------|------|-----------------|------------|
+| F1 | MED | H | `--filter NázevSouboru` nematchne volné `@Test func` → falešný PASS | plný `swift test` (T2 S2/S4) + Global Constraint | fixed |
+| F2 | MED | M | agent spustí GUI `.app` → visí/nemechanické | brána = `swift build && swift test`; S7 jen postaví+předá, NEspouští (T3 S7) | fixed |
+| F3 | MED | L | `@AppStorage<MenuBarStyle>` se nezkompiluje | verify-in-build (T3 S6) + String-rawValue fallback (T3 S2b) + kill criterion | fixed (mitigated) |
+| F4 | LOW | M | rozjetý encoding/klíče @AppStorage↔PreferencesStore | Global Constraint: přes `PreferenceKeys.*`, rawValue/Bool, `.standard` | fixed |
+| F5 | LOW | M | vágní umístění UI sekce | přesná kotva (T3 S2c) | fixed |
+| F6 | LOW | L | `max(by:)` tie-break nezmíněn | poznámka v T1 (první vyhrává) | fixed |
+
+## Audit Trail
+- **Lenses applied:** 1 red-team, 2 security (N/A — žádné secrets/síť/destruktivní operace; jen zápis vlastních UI prefs do UserDefaults), 3 assumptions, 4 dependencies, 5 alternatives, 6 cheap-executor, 7 goal-fit.
+- **Alternativy (lens 5):** (a) style-logika ve `MenuBarTitleBuilder` + `Leading`, renderer mechanický *(zvoleno — plně unit-testovatelné v Kitu)*; (b) `switch MenuBarStyle` přímo v AppKit rendereru (logika by nebyla testovatelná); (c) builder vrací hotový plain string (ztráta per-segment barev). Volba (a) ze specu potvrzena.
+- **Findings:** 0 CRIT, 0 HIGH, 3 MED (F1–F3), 3 LOW (F4–F6) → všech 6 fixnuto.
+- **Re-audit po hardeningu (R*):** none (fallback F3 ani upřesnění nezavedly nový defekt).
+- **Tabletop dry run:** PASSED — build zelený po každém tasku (default args + aditivní změny); existující `FormattingTests` projdou díky default `leading=.providerDot`; `settings`-před-`menuBar` ordering OK (closure čte `menuBar` až za běhu); identifikátory (`applyAppearance`, `onAppearanceChanged`, `segments(for:style:showUsedPercent:)`, `MenuBarSegment.Leading`) konzistentní napříč tasky.
+- **Rozhodnutí uživatele (CP2):** 1A opravit vše F1–F6; 2A důvěřovat `@AppStorage<enum>` + zdokumentovat String fallback; 3A kill criterion aktivní.
+- **K hlídání během exekuce:** jediný reálný neznámý je kompilace `@AppStorage<MenuBarStyle>` (T3 S6) — má fallback i kill criterion.
