@@ -49,6 +49,30 @@ public struct ProviderUsage: Sendable, Equatable {
     public var nearestLimitFraction: Double { windows.map(\.usedFraction).max() ?? 0 }
     public var nearestLimitPercent: Int { Int((nearestLimitFraction * 100).rounded()) }
 
+    /// Used % okna zvoleného lištou. Chybí-li dané okno, fallback na nejhorší (nearestLimitPercent).
+    public func usedPercent(for source: BarWindowSource) -> Int {
+        switch source {
+        case .auto:
+            return nearestLimitPercent
+        case .session:
+            if let w = windows.first(where: { $0.kind == .rolling5h }) {
+                return Int((w.usedFraction * 100).rounded())
+            }
+            return nearestLimitPercent
+        case .weekly:
+            // F2: preferuj CELKOVÉ týdenní okno (weekly_all, scope == nil) — to je „Weekly" na fotce.
+            if let allWeekly = windows.first(where: { if case .weekly(let s) = $0.kind { return s == nil }; return false }) {
+                return Int((allWeekly.usedFraction * 100).rounded())
+            }
+            // jinak nejhorší týdenní (scoped), jinak nearest
+            let weeklies = windows.filter { if case .weekly = $0.kind { return true }; return false }
+            if let w = weeklies.max(by: { $0.usedFraction < $1.usedFraction }) {
+                return Int((w.usedFraction * 100).rounded())
+            }
+            return nearestLimitPercent
+        }
+    }
+
     public static func unavailable(_ id: ProviderID, displayName: String, reason: String, now: Date) -> ProviderUsage {
         ProviderUsage(providerId: id, displayName: displayName, planLabel: nil,
                       windows: [], status: .unavailable(reason), lastUpdated: now)

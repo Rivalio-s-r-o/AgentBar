@@ -31,12 +31,12 @@ public enum MenuBarTitleBuilder {
     }
 
     /// Segment pro styly A/B (per provider, tečka providera nebo štítek).
-    private static func perProvider(_ u: ProviderUsage, label: Bool, showUsedPercent: Bool) -> MenuBarSegment {
+    private static func perProvider(_ u: ProviderUsage, label: Bool, showUsedPercent: Bool, source: BarWindowSource) -> MenuBarSegment {
         let leading: MenuBarSegment.Leading = label ? .label(shortLabel(u.providerId)) : .providerDot
         if case .unavailable = u.status {
             return MenuBarSegment(providerId: u.providerId, leading: leading, text: "—", level: .normal)
         }
-        let used = u.nearestLimitPercent
+        let used = u.usedPercent(for: source)
         let shown = showUsedPercent ? used : max(0, 100 - used)
         return MenuBarSegment(providerId: u.providerId, leading: leading,
                               text: "\(shown)%", level: UsageLevel.level(forPercent: used))
@@ -44,21 +44,22 @@ public enum MenuBarTitleBuilder {
 
     public static func segments(for usages: [ProviderUsage],
                                 style: MenuBarStyle = .dotPercent,
-                                showUsedPercent: Bool = false) -> [MenuBarSegment] {
+                                showUsedPercent: Bool = false,
+                                source: BarWindowSource = .auto) -> [MenuBarSegment] {
         switch style {
         case .dotPercent:
-            return usages.map { perProvider($0, label: false, showUsedPercent: showUsedPercent) }
+            return usages.map { perProvider($0, label: false, showUsedPercent: showUsedPercent, source: source) }
         case .labelPercent:
-            return usages.map { perProvider($0, label: true, showUsedPercent: showUsedPercent) }
+            return usages.map { perProvider($0, label: true, showUsedPercent: showUsedPercent, source: source) }
         case .dotOnly:
             return usages.map { u in
-                let level = displayable(u) ? UsageLevel.level(forPercent: u.nearestLimitPercent) : .normal
+                let level = displayable(u) ? UsageLevel.level(forPercent: u.usedPercent(for: source)) : .normal
                 return MenuBarSegment(providerId: u.providerId, leading: .levelDot, text: "", level: level)
             }
         case .worst:
             let pool = usages.filter(displayable)
-            if let worst = pool.max(by: { $0.nearestLimitPercent < $1.nearestLimitPercent }) {
-                let used = worst.nearestLimitPercent
+            if let worst = pool.max(by: { $0.usedPercent(for: source) < $1.usedPercent(for: source) }) {
+                let used = worst.usedPercent(for: source)
                 let shown = showUsedPercent ? used : max(0, 100 - used)
                 return [MenuBarSegment(providerId: worst.providerId, leading: .providerDot,
                                        text: "\(shown)%", level: UsageLevel.level(forPercent: used))]

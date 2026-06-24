@@ -13,6 +13,7 @@
 
 "window.session" = "Relace";
 "window.weekly" = "Týden";
+"barsource.auto" = "Auto";
 
 "style.dotPercent" = "Tečka + %";
 "style.labelPercent" = "Štítek + %";

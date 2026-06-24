@@ -5,6 +5,7 @@ public enum PreferenceKeys {
     public static let remainingThresholdPercent = "remainingThresholdPercent"
     public static let barStyle = "barStyle"
     public static let showUsedPercent = "showUsedPercent"
+    public static let barWindowSource = "barWindowSource"
 }
 
 public struct PreferencesStore {
@@ -29,5 +30,9 @@ public struct PreferencesStore {
     public var showUsedPercent: Bool {
         get { defaults.bool(forKey: PreferenceKeys.showUsedPercent) }   // default false
         nonmutating set { defaults.set(newValue, forKey: PreferenceKeys.showUsedPercent) }
+    }
+    public var barWindowSource: BarWindowSource {
+        get { BarWindowSource(rawValue: defaults.string(forKey: PreferenceKeys.barWindowSource) ?? "") ?? .auto }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: PreferenceKeys.barWindowSource) }
     }
 }

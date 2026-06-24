@@ -13,6 +13,7 @@
 
 "window.session" = "Session";
 "window.weekly" = "Weekly";
+"barsource.auto" = "Auto";
 
 "style.dotPercent" = "Dot + %";
 "style.labelPercent" = "Label + %";
