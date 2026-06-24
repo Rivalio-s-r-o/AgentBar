@@ -51,3 +51,59 @@ import Foundation
     let t = try #require(ClaudeTokenScanner(projectsDir: tmp).todayUsage(now: now))
     #expect(t.perModel.map(\.modelName) == ["claude-opus-4-8"])   // "<synthetic>" vyfiltrován
 }
+
+@Test func claudeRangeUsageSečteVíceDnů() throws {
+    let cal = Calendar.current
+    var c = DateComponents(); c.year = 2026; c.month = 6; c.day = 20; c.hour = 12
+    let day20 = cal.date(from: c)!
+    let day10 = cal.date(byAdding: .day, value: -10, to: day20)!   // v rozsahu
+    let day40 = cal.date(byAdding: .day, value: -40, to: day20)!   // mimo rozsah (>30 dní)
+    let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("claudeRange-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    // soubor v rozsahu (mtime = day10, řádky day10)
+    let f1 = tmp.appendingPathComponent("a.jsonl")
+    try """
+    {"type":"assistant","timestamp":"\(iso.string(from: day10))","message":{"model":"claude-opus-4-8","usage":{"input_tokens":100,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":9999}}}
+    """.data(using: .utf8)!.write(to: f1)
+    try FileManager.default.setAttributes([.modificationDate: day10], ofItemAtPath: f1.path)
+
+    // soubor mimo rozsah (mtime = day40) — nesmí se započítat (mtime < start)
+    let f2 = tmp.appendingPathComponent("b.jsonl")
+    try """
+    {"type":"assistant","timestamp":"\(iso.string(from: day40))","message":{"model":"claude-opus-4-8","usage":{"input_tokens":777,"output_tokens":777,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+    """.data(using: .utf8)!.write(to: f2)
+    try FileManager.default.setAttributes([.modificationDate: day40], ofItemAtPath: f2.path)
+
+    let start = cal.date(byAdding: .day, value: -30, to: day20)!
+    let r = try #require(ClaudeTokenScanner(projectsDir: tmp).rangeUsage(start: start, end: day20))
+    #expect(r.total.realTokens == 150)            // jen f1 (100+50); f2 mimo rozsah; cache se do realTokens nepočítá
+    #expect(r.estimatedCost > 0)
+}
+
+@Test func claudeRangeUsageFiltrujeŘádkyMimoOkno() throws {
+    // soubor má mtime v rozsahu, ale obsahuje řádek STARŠÍ než start → parser ho odfiltruje
+    let cal = Calendar.current
+    var c = DateComponents(); c.year = 2026; c.month = 6; c.day = 20; c.hour = 12
+    let day20 = cal.date(from: c)!
+    let start = cal.date(byAdding: .day, value: -30, to: day20)!
+    let inWindow = cal.date(byAdding: .day, value: -5, to: day20)!
+    let beforeWindow = cal.date(byAdding: .day, value: -35, to: day20)!
+    let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("claudeRange2-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    let f = tmp.appendingPathComponent("a.jsonl")
+    try """
+    {"type":"assistant","timestamp":"\(iso.string(from: inWindow))","message":{"model":"claude-opus-4-8","usage":{"input_tokens":100,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+    {"type":"assistant","timestamp":"\(iso.string(from: beforeWindow))","message":{"model":"claude-opus-4-8","usage":{"input_tokens":555,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+    """.data(using: .utf8)!.write(to: f)
+    try FileManager.default.setAttributes([.modificationDate: inWindow], ofItemAtPath: f.path)
+
+    let r = try #require(ClaudeTokenScanner(projectsDir: tmp).rangeUsage(start: start, end: day20))
+    #expect(r.total.realTokens == 100)            // řádek beforeWindow (555) odfiltrován parserem
+}
