@@ -21,7 +21,7 @@ public struct ClaudeCodeCollector: UsageProvider {
         if let fresh = await liveSource?.fetchFresh() {
             return ProviderUsage(providerId: .claudeCode, displayName: "Claude Code",
                 planLabel: fresh.planLabel, windows: fresh.windows, status: .ok,
-                lastUpdated: now, today: today)
+                lastUpdated: fresh.fetchedAt, today: today)
         }
 
         // 2) Fallback: lokální cache (stávající chování v0.1–v0.5).

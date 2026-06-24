@@ -21,10 +21,10 @@ public struct CodexCollector: UsageProvider {
         let today = includeToday ? CodexTokenScanner().todayUsage(now: now) : nil
 
         // 1) Živé wham/usage (čerstvé limity + plán). Selhání → nil → fallback na JSONL.
-        if let snap = await liveSource?.fetchFresh() {
+        if let fresh = await liveSource?.fetchFresh() {
             return ProviderUsage(providerId: .codex, displayName: "Codex",
-                planLabel: CodexPlan.label(forPlanType: snap.planType), windows: snap.windows,
-                status: .ok, lastUpdated: now, today: today)
+                planLabel: CodexPlan.label(forPlanType: fresh.snapshot.planType), windows: fresh.snapshot.windows,
+                status: .ok, lastUpdated: fresh.fetchedAt, today: today)
         }
 
         // 2) Fallback: session JSONL (stávající chování).

@@ -29,18 +29,20 @@ private func place(_ fixture: String, into dir: URL, sub: String, mtime: Date) t
 }
 
 private struct FakeCodexSource: CodexUsageSource {
-    let snap: CodexSnapshot?
-    func fetchFresh() async -> CodexSnapshot? { snap }
+    let live: CodexLiveUsage?
+    func fetchFresh() async -> CodexLiveUsage? { live }
 }
 
 @Test func codexCollectorPoužijeŽivýZdroj() async {
-    let snap = CodexSnapshot(windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.05, resetAt: nil)], planType: "plus")
+    let when = Date(timeIntervalSince1970: 1_700_000_000)
+    let live = CodexLiveUsage(snapshot: CodexSnapshot(windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.05, resetAt: nil)], planType: "plus"), fetchedAt: when)
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("cx-live-\(UUID().uuidString)")
-    let u = await CodexCollector(sessionsDir: root, liveSource: FakeCodexSource(snap: snap)).fetch(includeToday: false)
+    let u = await CodexCollector(sessionsDir: root, liveSource: FakeCodexSource(live: live)).fetch(includeToday: false)
     if case .ok = u.status {} else { Issue.record("čekán .ok z živého zdroje") }
     #expect(u.planLabel == "Plus")          // CodexPlan.label aplikován v collectoru
     #expect(u.windows.count == 1)
     #expect(u.windows.first?.kind == .rolling5h)
+    #expect(u.lastUpdated == when)
 }
 
 @Test func codexCollectorFallbackNaJSONLKdyžŽivýNil() async throws {
@@ -48,7 +50,7 @@ private struct FakeCodexSource: CodexUsageSource {
     defer { try? FileManager.default.removeItem(at: root) }
     try place("codex-session-with-limits", into: root, sub: "a/s.jsonl", mtime: Date(timeIntervalSince1970: 1000))
     let u = await CodexCollector(sessionsDir: root, staleAfter: .greatestFiniteMagnitude,
-                                 liveSource: FakeCodexSource(snap: nil)).fetch(includeToday: false)
+                                 liveSource: FakeCodexSource(live: nil)).fetch(includeToday: false)
     #expect(u.windows.contains { $0.kind == .rolling5h })
     #expect(u.planLabel == "Plus")          // retrofit: "plus" → "Plus"
 }

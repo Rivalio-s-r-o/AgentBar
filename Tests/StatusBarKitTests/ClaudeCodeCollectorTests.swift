@@ -46,14 +46,16 @@ private struct FakeClaudeSource: ClaudeUsageSource {
 }
 
 @Test func collectorPoužijeŽivýZdroj() async {
+    let when = Date(timeIntervalSince1970: 1_700_000_000)
     let fresh = ClaudeLiveUsage(
-        windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.13, resetAt: nil)], planLabel: "Max")
+        windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.13, resetAt: nil)], planLabel: "Max", fetchedAt: when)
     let missing = FileManager.default.temporaryDirectory.appendingPathComponent("none-\(UUID().uuidString).json")
     let u = await ClaudeCodeCollector(cachePath: missing, staleAfter: 999,
         liveSource: FakeClaudeSource(usage: fresh)).fetch(includeToday: false)
     #expect(u.status == .ok)                                  // živé, ne unavailable (i když cache chybí)
     #expect(u.planLabel == "Max")
     #expect(u.windows.first?.usedFraction == 0.13)
+    #expect(u.lastUpdated == when)                            // lastUpdated = fetchedAt
 }
 
 @Test func collectorFallbackNaCacheKdyžŽivýNil() async throws {

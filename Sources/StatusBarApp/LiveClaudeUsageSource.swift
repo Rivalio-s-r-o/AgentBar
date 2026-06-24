@@ -51,7 +51,7 @@ final class LiveClaudeUsageSource: ClaudeUsageSource, @unchecked Sendable {
         case 200:
             guard let body, let windows = try? ClaudeUsageCacheParser.parseAPIWindows(body), !windows.isEmpty
             else { return (.failed, nil) }
-            return (.success, ClaudeLiveUsage(windows: windows, planLabel: ClaudePlan.label(forSubscriptionType: sub)))
+            return (.success, ClaudeLiveUsage(windows: windows, planLabel: ClaudePlan.label(forSubscriptionType: sub), fetchedAt: Date()))
         case 429: return (.rateLimited, nil)
         default:  return (.failed, nil)
         }

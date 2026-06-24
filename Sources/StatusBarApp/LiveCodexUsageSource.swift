@@ -5,12 +5,12 @@ import StatusBarKit
 final class LiveCodexUsageSource: CodexUsageSource, @unchecked Sendable {
     private let lock = NSLock()
     private var gate = LiveGateState()
-    private var lastGood: CodexSnapshot?
+    private var lastGood: CodexLiveUsage?
     private let policy = LiveUsagePolicy()
 
-    func fetchFresh() async -> CodexSnapshot? {
+    func fetchFresh() async -> CodexLiveUsage? {
         let now = Date()
-        let (doFetch, cached): (Bool, CodexSnapshot?) = lock.withLock {
+        let (doFetch, cached): (Bool, CodexLiveUsage?) = lock.withLock {
             if gate.shouldFetch(now: now, policy: policy) {
                 gate.lastAttemptAt = now   // F3: optimistický claim — serializuje souběžné fetchFresh
                 return (true, lastGood)
@@ -27,7 +27,7 @@ final class LiveCodexUsageSource: CodexUsageSource, @unchecked Sendable {
         return snapshot ?? cached
     }
 
-    private func doNetwork() async -> (LiveFetchSignal, CodexSnapshot?) {
+    private func doNetwork() async -> (LiveFetchSignal, CodexLiveUsage?) {
         guard let auth = CodexAuth.read() else { return (.failed, nil) }
         var (status, body) = await usageCall(token: auth.accessToken, accountId: auth.accountId)
         if status == 401, let refresh = auth.refreshToken, let newToken = await refreshAndStore(refreshToken: refresh) {
@@ -37,7 +37,7 @@ final class LiveCodexUsageSource: CodexUsageSource, @unchecked Sendable {
         case 200:
             guard let body, let snap = CodexUsageAPIParser.parse(body), !snap.windows.isEmpty
             else { return (.failed, nil) }
-            return (.success, snap)
+            return (.success, CodexLiveUsage(snapshot: snap, fetchedAt: Date()))
         case 429: return (.rateLimited, nil)
         default:  return (.failed, nil)
         }

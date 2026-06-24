@@ -3,8 +3,9 @@ import Foundation
 public struct ClaudeLiveUsage: Sendable, Equatable {
     public let windows: [UsageWindow]
     public let planLabel: String?
-    public init(windows: [UsageWindow], planLabel: String?) {
-        self.windows = windows; self.planLabel = planLabel
+    public let fetchedAt: Date
+    public init(windows: [UsageWindow], planLabel: String?, fetchedAt: Date = Date()) {
+        self.windows = windows; self.planLabel = planLabel; self.fetchedAt = fetchedAt
     }
 }
 
