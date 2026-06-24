@@ -44,3 +44,30 @@ private struct TodayStub: UsageProvider {
     await coord.refreshNow(includeToday: false)
     #expect(store.providers[.claudeCode]?.today == nil)        // nic k zachování
 }
+
+private final class TogglingTodayStub: UsageProvider, @unchecked Sendable {
+    let id: ProviderID
+    private let lock = NSLock()
+    private var calls = 0
+    init(id: ProviderID) { self.id = id }
+    func fetch(includeToday: Bool) async -> ProviderUsage {
+        let n = lock.withLock { calls += 1; return calls }
+        let today: TodayUsage? = (includeToday && n == 1)
+            ? TodayUsage(perModel: [ModelTokens(modelName: "x", tokens: TokenUsage(input: 100))], estimatedCost: 1)
+            : nil
+        return ProviderUsage(providerId: id, displayName: id.rawValue, planLabel: nil,
+            windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.5, resetAt: nil)],
+            status: .ok, lastUpdated: Date(), today: today)
+    }
+}
+
+@MainActor @Test func druhýTrueSkenSNilVyčistíCache() async {
+    let store = UsageStore()
+    let coord = RefreshCoordinator(store: store, providers: [TogglingTodayStub(id: .claudeCode)])
+    await coord.refreshNow(includeToday: true)    // 1. sken → today
+    #expect(store.providers[.claudeCode]?.today != nil)
+    await coord.refreshNow(includeToday: true)    // 2. sken → nil → cache vyčištěna (removeValue)
+    #expect(store.providers[.claudeCode]?.today == nil)
+    await coord.refreshNow(includeToday: false)   // background → cache prázdná → today nil (žádný stale)
+    #expect(store.providers[.claudeCode]?.today == nil)
+}
