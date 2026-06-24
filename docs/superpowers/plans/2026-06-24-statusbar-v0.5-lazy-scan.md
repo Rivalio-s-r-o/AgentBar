@@ -220,11 +220,12 @@ git commit -m "feat: líný sken today — sken jen při otevření popoveru, ba
 
 ---
 
-### Task 2: Polish — `gpt-5.x` komentář + negativní `CodexTokenScanner` testy
+### Task 2: Polish — `gpt-5.x` komentář + negativní `CodexTokenScanner` testy + midnight-clear test
 
 **Files:**
 - Modify: `Sources/StatusBarKit/Pricing/PricingTable.swift`
 - Modify: `Tests/StatusBarKitTests/CodexTokenScannerTests.swift`
+- Modify: `Tests/StatusBarKitTests/RefreshCoordinatorTests.swift` (test midnight-clearing větve)
 
 - [ ] **Step 1: Modify `PricingTable.swift` — komentář k dead-code větvím.**
 
@@ -267,15 +268,46 @@ nahraď (`new_string`):
 }
 ```
 
-- [ ] **Step 3: Run → GREEN.** `swift test` → Expected: vše PASS (46 + 2 = 48). `swift build` čistý.
-- [ ] **Step 4: Commit.**
+- [ ] **Step 3: Přidej test midnight-clearing větve do `RefreshCoordinatorTests.swift`** (na konec). Toggling stub: 1. `true`-sken vrátí today, 2. `true`-sken vrátí nil (simulace nového dne) → cache se vyčistí (`removeValue`):
 
-```bash
-git add Sources/StatusBarKit/Pricing/PricingTable.swift Tests/StatusBarKitTests/CodexTokenScannerTests.swift
-git commit -m "polish: komentář k dead-code gpt-5.x větvím + negativní CodexTokenScanner testy"
+```swift
+private final class TogglingTodayStub: UsageProvider, @unchecked Sendable {
+    let id: ProviderID
+    private let lock = NSLock()
+    private var calls = 0
+    init(id: ProviderID) { self.id = id }
+    func fetch(includeToday: Bool) async -> ProviderUsage {
+        lock.lock(); calls += 1; let n = calls; lock.unlock()
+        let today: TodayUsage? = (includeToday && n == 1)
+            ? TodayUsage(perModel: [ModelTokens(modelName: "x", tokens: TokenUsage(input: 100))], estimatedCost: 1)
+            : nil
+        return ProviderUsage(providerId: id, displayName: id.rawValue, planLabel: nil,
+            windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.5, resetAt: nil)],
+            status: .ok, lastUpdated: Date(), today: today)
+    }
+}
+
+@MainActor @Test func druhýTrueSkenSNilVyčistíCache() async {
+    let store = UsageStore()
+    let coord = RefreshCoordinator(store: store, providers: [TogglingTodayStub(id: .claudeCode)])
+    await coord.refreshNow(includeToday: true)    // 1. sken → today
+    #expect(store.providers[.claudeCode]?.today != nil)
+    await coord.refreshNow(includeToday: true)    // 2. sken → nil → cache vyčištěna (removeValue)
+    #expect(store.providers[.claudeCode]?.today == nil)
+    await coord.refreshNow(includeToday: false)   // background → cache prázdná → today nil (žádný stale)
+    #expect(store.providers[.claudeCode]?.today == nil)
+}
 ```
 
-**Verify success (Task 2):** `swift test` 48/48; `swift build` čistý.
+- [ ] **Step 4: Run → GREEN.** `swift test` → Expected: vše PASS (46 + 2 negativní + 1 clearing = 49). `swift build` čistý.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add Sources/StatusBarKit/Pricing/PricingTable.swift Tests/StatusBarKitTests/CodexTokenScannerTests.swift Tests/StatusBarKitTests/RefreshCoordinatorTests.swift
+git commit -m "polish: gpt-5.x komentář + negativní Codex scanner testy + midnight-clear test"
+```
+
+**Verify success (Task 2):** `swift test` 49/49; `swift build` čistý.
 
 ---
 
