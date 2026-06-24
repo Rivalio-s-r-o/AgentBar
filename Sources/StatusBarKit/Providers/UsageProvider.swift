@@ -2,5 +2,5 @@ import Foundation
 
 public protocol UsageProvider: Sendable {
     var id: ProviderID { get }
-    func fetch() async -> ProviderUsage
+    func fetch(includeToday: Bool) async -> ProviderUsage
 }

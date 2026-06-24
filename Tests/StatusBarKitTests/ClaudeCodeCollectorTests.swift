@@ -13,7 +13,7 @@ private func copyFixtureToTemp() throws -> URL {
     let tmp = try copyFixtureToTemp()
     defer { try? FileManager.default.removeItem(at: tmp) }
     // staleAfter obrovský => i stará fixtura je ok
-    let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: .greatestFiniteMagnitude).fetch()
+    let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: .greatestFiniteMagnitude).fetch(includeToday: false)
     #expect(u.status == .ok)
     #expect(u.windows.isEmpty == false)
 }
@@ -22,13 +22,20 @@ private func copyFixtureToTemp() throws -> URL {
     let tmp = try copyFixtureToTemp()
     defer { try? FileManager.default.removeItem(at: tmp) }
     // fixtura má timestamp z minulosti => staleAfter 1 s => degraded
-    let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: 1).fetch()
+    let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: 1).fetch(includeToday: false)
     if case .degraded = u.status {} else { Issue.record("čekán .degraded, byl \(u.status)") }
     #expect(u.windows.isEmpty == false)
 }
 
 @Test func collectorChybějícíSouborUnavailable() async {
     let missing = FileManager.default.temporaryDirectory.appendingPathComponent("missing-\(UUID().uuidString).json")
-    let u = await ClaudeCodeCollector(cachePath: missing, staleAfter: 999).fetch()
+    let u = await ClaudeCodeCollector(cachePath: missing, staleAfter: 999).fetch(includeToday: false)
     if case .unavailable = u.status {} else { Issue.record("čekán .unavailable") }
+}
+
+@Test func collectorIncludeTodayFalseNemáToday() async throws {
+    let tmp = try copyFixtureToTemp()
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: .greatestFiniteMagnitude).fetch(includeToday: false)
+    #expect(u.today == nil)   // includeToday=false → scanner se nespustí
 }

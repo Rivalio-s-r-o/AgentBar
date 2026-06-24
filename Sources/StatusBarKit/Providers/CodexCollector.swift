@@ -13,7 +13,7 @@ public struct CodexCollector: UsageProvider {
         self.maxFilesToScan = maxFilesToScan
     }
 
-    public func fetch() async -> ProviderUsage {
+    public func fetch(includeToday: Bool) async -> ProviderUsage {
         let now = Date()
         let files = newestSessionFiles(limit: maxFilesToScan)   // od nejnovějšího
         guard !files.isEmpty else {
@@ -27,7 +27,7 @@ public struct CodexCollector: UsageProvider {
             let status: ProviderStatus = age > staleAfter
                 ? .degraded("Data stará \(Int(age/3600)) h — spusť `codex` pro aktualizaci.")
                 : .ok
-            let today = CodexTokenScanner().todayUsage(now: now)
+            let today = includeToday ? CodexTokenScanner().todayUsage(now: now) : nil
             return ProviderUsage(providerId: .codex, displayName: "Codex",
                 planLabel: snap.planType, windows: snap.windows, status: status,
                 lastUpdated: f.modified, today: today)

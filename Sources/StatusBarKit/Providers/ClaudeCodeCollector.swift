@@ -11,7 +11,7 @@ public struct ClaudeCodeCollector: UsageProvider {
         self.staleAfter = staleAfter
     }
 
-    public func fetch() async -> ProviderUsage {
+    public func fetch(includeToday: Bool) async -> ProviderUsage {
         let now = Date()
         guard let data = try? Data(contentsOf: cachePath) else {
             return .unavailable(.claudeCode, displayName: "Claude Code",
@@ -19,7 +19,7 @@ public struct ClaudeCodeCollector: UsageProvider {
         }
         do {
             let usage = try ClaudeUsageCacheParser.parse(data)
-            let today = ClaudeTokenScanner().todayUsage(now: now)
+            let today = includeToday ? ClaudeTokenScanner().todayUsage(now: now) : nil
             let age = now.timeIntervalSince(usage.lastUpdated)
             if age > staleAfter {
                 return ProviderUsage(providerId: usage.providerId, displayName: usage.displayName,

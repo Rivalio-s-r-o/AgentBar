@@ -17,13 +17,13 @@ private func place(_ fixture: String, into dir: URL, sub: String, mtime: Date) t
     try place("codex-session-with-limits", into: root, sub: "a/older.jsonl", mtime: Date(timeIntervalSince1970: 1000))
     try place("codex-session-null-limits", into: root, sub: "a/newer.jsonl", mtime: Date(timeIntervalSince1970: 2000))
 
-    let u = await CodexCollector(sessionsDir: root, staleAfter: .greatestFiniteMagnitude, maxFilesToScan: 10).fetch()
+    let u = await CodexCollector(sessionsDir: root, staleAfter: .greatestFiniteMagnitude, maxFilesToScan: 10).fetch(includeToday: false)
     #expect(u.windows.contains { $0.kind == .rolling5h })
     #expect(u.planLabel == "plus")
 }
 
 @Test func collectorBezSessionUnavailable() async {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("cx-empty-\(UUID().uuidString)")
-    let u = await CodexCollector(sessionsDir: root, staleAfter: 999, maxFilesToScan: 10).fetch()
+    let u = await CodexCollector(sessionsDir: root, staleAfter: 999, maxFilesToScan: 10).fetch(includeToday: false)
     if case .unavailable = u.status {} else { Issue.record("čekán .unavailable") }
 }

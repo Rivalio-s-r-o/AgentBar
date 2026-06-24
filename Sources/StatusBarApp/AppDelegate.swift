@@ -27,14 +27,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.notifier.requestAuthorizationIfNeeded()
         })
         menuBar = MenuBarController(store: store, onClick: { [weak self] in
-            Task { await self?.coordinator.refreshNow() }
+            Task { await self?.coordinator.refreshNow(includeToday: true) }   // popover/refresh → skenuj today
         }, onOpenSettings: { [weak self] in
             self?.settings.show()
         })
-        Task { await coordinator.refreshNow() }
+        Task { await coordinator.refreshNow(includeToday: false) }            // start: jen limity (rychle)
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             guard let self else { return }
-            Task { await self.coordinator.refreshNow() }
+            Task { await self.coordinator.refreshNow(includeToday: false) }   // background: jen limity
         }
     }
 }
