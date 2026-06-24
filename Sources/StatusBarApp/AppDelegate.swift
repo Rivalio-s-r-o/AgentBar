@@ -13,7 +13,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        coordinator = RefreshCoordinator(store: store, providers: [ClaudeCodeCollector(), CodexCollector()])
+        coordinator = RefreshCoordinator(store: store, providers: [
+            ClaudeCodeCollector(liveSource: LiveClaudeUsageSource()),
+            CodexCollector(),
+        ])
         coordinator.onRefreshed = { [weak self] usages in
             guard let self, self.prefs.notificationsEnabled else { return }
             let (toFire, newState) = AlertEvaluator.evaluate(
