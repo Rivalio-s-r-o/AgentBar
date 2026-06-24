@@ -3,14 +3,22 @@ import PackageDescription
 
 let package = Package(
     name: "StatusBar",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "StatusBarKit"),
-        .executableTarget(name: "StatusBarApp", dependencies: ["StatusBarKit"]),
+        .target(
+            name: "StatusBarKit",
+            resources: [.process("Resources")]
+        ),
+        .executableTarget(
+            name: "StatusBarApp",
+            dependencies: ["StatusBarKit"],
+            resources: [.process("Resources")]
+        ),
         .testTarget(
             name: "StatusBarKitTests",
             dependencies: ["StatusBarKit"],
-            resources: [.copy("Fixtures")]   // adresář Fixtures/ musí existovat už teď (viz Step 2)
+            resources: [.copy("Fixtures")]
         ),
     ]
 )
