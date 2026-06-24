@@ -16,3 +16,10 @@ import Testing
     ], estimatedCost: 0)
     #expect(t.total == TokenUsage(input: 110, output: 55))
 }
+
+@Test func realACacheTokeny() {
+    let t = TokenUsage(input: 10, output: 5, cacheWrite: 2, cacheRead: 100)
+    #expect(t.realTokens == 15)
+    #expect(t.cacheTokens == 102)
+    #expect(t.totalTokens == 117)
+}

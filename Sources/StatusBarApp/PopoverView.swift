@@ -61,11 +61,11 @@ private struct ProviderCard: View {
             HStack {
                 Text("Dnes").font(.caption2).foregroundStyle(.secondary)
                 Spacer()
-                Text("\(TokenFormatter.compact(today.total.totalTokens)) tok. ≈ \(TokenFormatter.money(today.estimatedCost))")
+                Text("\(TokenFormatter.compact(today.total.realTokens)) tok (+\(TokenFormatter.compact(today.total.cacheTokens)) cache) ≈ \(TokenFormatter.money(today.estimatedCost))")
                     .font(.caption).fontWeight(.medium)
             }
             if usage.providerId == .claudeCode, today.perModel.count > 1 {
-                Text(today.perModel.map { "\(TokenFormatter.modelShortName($0.modelName)) \(TokenFormatter.compact($0.tokens.totalTokens))" }
+                Text(today.perModel.map { "\(TokenFormatter.modelShortName($0.modelName)) \(TokenFormatter.compact($0.tokens.realTokens))" }
                         .joined(separator: " · "))
                     .font(.caption2).foregroundStyle(.tertiary)
             }

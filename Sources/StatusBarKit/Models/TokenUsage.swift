@@ -10,6 +10,8 @@ public struct TokenUsage: Sendable, Equatable {
     }
     public static let zero = TokenUsage()
     public var totalTokens: UInt { input + output + cacheWrite + cacheRead }
+    public var realTokens: UInt { input + output }       // reálná práce (drahé)
+    public var cacheTokens: UInt { cacheWrite + cacheRead }  // cache (levné, nafukuje total)
     public static func + (a: TokenUsage, b: TokenUsage) -> TokenUsage {
         TokenUsage(input: a.input + b.input, output: a.output + b.output,
                    cacheWrite: a.cacheWrite + b.cacheWrite, cacheRead: a.cacheRead + b.cacheRead)
