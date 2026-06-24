@@ -5,16 +5,29 @@ public struct CodexCollector: UsageProvider {
     private let sessionsDir: URL
     private let staleAfter: TimeInterval
     private let maxFilesToScan: Int
+    private let liveSource: (any CodexUsageSource)?
 
-    public init(sessionsDir: URL? = nil, staleAfter: TimeInterval = 24 * 3600, maxFilesToScan: Int = 10) {
+    public init(sessionsDir: URL? = nil, staleAfter: TimeInterval = 24 * 3600,
+                maxFilesToScan: Int = 10, liveSource: (any CodexUsageSource)? = nil) {
         self.sessionsDir = sessionsDir ?? FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".codex/sessions")
         self.staleAfter = staleAfter
         self.maxFilesToScan = maxFilesToScan
+        self.liveSource = liveSource
     }
 
     public func fetch(includeToday: Bool) async -> ProviderUsage {
         let now = Date()
+        let today = includeToday ? CodexTokenScanner().todayUsage(now: now) : nil
+
+        // 1) Živé wham/usage (čerstvé limity + plán). Selhání → nil → fallback na JSONL.
+        if let snap = await liveSource?.fetchFresh() {
+            return ProviderUsage(providerId: .codex, displayName: "Codex",
+                planLabel: CodexPlan.label(forPlanType: snap.planType), windows: snap.windows,
+                status: .ok, lastUpdated: now, today: today)
+        }
+
+        // 2) Fallback: session JSONL (stávající chování).
         let files = newestSessionFiles(limit: maxFilesToScan)   // od nejnovějšího
         guard !files.isEmpty else {
             return .unavailable(.codex, displayName: "Codex",
@@ -27,10 +40,9 @@ public struct CodexCollector: UsageProvider {
             let status: ProviderStatus = age > staleAfter
                 ? .degraded("Data stará \(Int(age/3600)) h — spusť `codex` pro aktualizaci.")
                 : .ok
-            let today = includeToday ? CodexTokenScanner().todayUsage(now: now) : nil
             return ProviderUsage(providerId: .codex, displayName: "Codex",
-                planLabel: snap.planType, windows: snap.windows, status: status,
-                lastUpdated: f.modified, today: today)
+                planLabel: CodexPlan.label(forPlanType: snap.planType), windows: snap.windows,
+                status: status, lastUpdated: f.modified, today: today)
         }
         return .unavailable(.codex, displayName: "Codex",
             reason: "V posledních \(maxFilesToScan) sessionech nejsou žádné limity.", now: now)

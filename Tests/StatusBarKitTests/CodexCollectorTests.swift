@@ -19,11 +19,36 @@ private func place(_ fixture: String, into dir: URL, sub: String, mtime: Date) t
 
     let u = await CodexCollector(sessionsDir: root, staleAfter: .greatestFiniteMagnitude, maxFilesToScan: 10).fetch(includeToday: false)
     #expect(u.windows.contains { $0.kind == .rolling5h })
-    #expect(u.planLabel == "plus")
+    #expect(u.planLabel == "Plus")
 }
 
 @Test func collectorBezSessionUnavailable() async {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("cx-empty-\(UUID().uuidString)")
     let u = await CodexCollector(sessionsDir: root, staleAfter: 999, maxFilesToScan: 10).fetch(includeToday: false)
     if case .unavailable = u.status {} else { Issue.record("čekán .unavailable") }
+}
+
+private struct FakeCodexSource: CodexUsageSource {
+    let snap: CodexSnapshot?
+    func fetchFresh() async -> CodexSnapshot? { snap }
+}
+
+@Test func codexCollectorPoužijeŽivýZdroj() async {
+    let snap = CodexSnapshot(windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.05, resetAt: nil)], planType: "plus")
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("cx-live-\(UUID().uuidString)")
+    let u = await CodexCollector(sessionsDir: root, liveSource: FakeCodexSource(snap: snap)).fetch(includeToday: false)
+    if case .ok = u.status {} else { Issue.record("čekán .ok z živého zdroje") }
+    #expect(u.planLabel == "Plus")          // CodexPlan.label aplikován v collectoru
+    #expect(u.windows.count == 1)
+    #expect(u.windows.first?.kind == .rolling5h)
+}
+
+@Test func codexCollectorFallbackNaJSONLKdyžŽivýNil() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("cx-fb-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: root) }
+    try place("codex-session-with-limits", into: root, sub: "a/s.jsonl", mtime: Date(timeIntervalSince1970: 1000))
+    let u = await CodexCollector(sessionsDir: root, staleAfter: .greatestFiniteMagnitude,
+                                 liveSource: FakeCodexSource(snap: nil)).fetch(includeToday: false)
+    #expect(u.windows.contains { $0.kind == .rolling5h })
+    #expect(u.planLabel == "Plus")          // retrofit: "plus" → "Plus"
 }
