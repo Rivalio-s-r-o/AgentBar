@@ -61,7 +61,8 @@ final class MenuBarController {
     private func render(_ usages: [ProviderUsage]) {
         let segs = MenuBarTitleBuilder.segments(for: usages,
                                                 style: prefs.barStyle,
-                                                showUsedPercent: prefs.showUsedPercent)
+                                                showUsedPercent: prefs.showUsedPercent,
+                                                source: prefs.barWindowSource)
         let title = NSMutableAttributedString()
         for (i, s) in segs.enumerated() {
             if i > 0 { title.append(NSAttributedString(string: "  ")) }

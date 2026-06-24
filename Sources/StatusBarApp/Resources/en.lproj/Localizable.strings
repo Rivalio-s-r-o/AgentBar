@@ -17,8 +17,10 @@
 "popover.computing" = "30 days: computing…";
 
 "settings.title" = "Settings";
+"settings.general" = "General";
 "settings.launch" = "Launch at login";
 "settings.bar" = "Menu bar display";
+"settings.barWindow" = "Menu bar window";
 "settings.style" = "Style";
 "settings.numberShows" = "Number shows";
 "settings.remaining" = "Remaining";

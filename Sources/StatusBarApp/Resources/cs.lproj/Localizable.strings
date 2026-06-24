@@ -17,8 +17,10 @@
 "popover.computing" = "30 dní: počítám…";
 
 "settings.title" = "Nastavení";
+"settings.general" = "Obecné";
 "settings.launch" = "Spouštět při přihlášení";
 "settings.bar" = "Zobrazení lišty";
+"settings.barWindow" = "Okno v liště";
 "settings.style" = "Styl";
 "settings.numberShows" = "Číslo ukazuje";
 "settings.remaining" = "Zbývající";

@@ -9,6 +9,7 @@ struct SettingsView: View {
     @AppStorage(PreferenceKeys.remainingThresholdPercent) private var threshold = 10
     @AppStorage(PreferenceKeys.barStyle) private var barStyle: MenuBarStyle = .dotPercent
     @AppStorage(PreferenceKeys.showUsedPercent) private var showUsedPercent = false
+    @AppStorage(PreferenceKeys.barWindowSource) private var barWindowSource: BarWindowSource = .auto
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
     private var verze: String {
@@ -19,11 +20,14 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(String(localized: "settings.title", bundle: .module)).font(.title3).fontWeight(.semibold)
 
-            Toggle(String(localized: "settings.launch", bundle: .module), isOn: $launchAtLogin)
-                .onChange(of: launchAtLogin) { _, on in
-                    LaunchAtLogin.setEnabled(on)
-                    launchAtLogin = LaunchAtLogin.isEnabled   // srovnej podle reálného stavu
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(localized: "settings.general", bundle: .module)).font(.headline)
+                Toggle(String(localized: "settings.launch", bundle: .module), isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, on in
+                        LaunchAtLogin.setEnabled(on)
+                        launchAtLogin = LaunchAtLogin.isEnabled
+                    }
+            }
 
             Divider()
 
@@ -46,6 +50,14 @@ struct SettingsView: View {
                     Spacer()
                 }
                 .onChange(of: showUsedPercent) { _, _ in onAppearanceChanged() }
+                HStack {
+                    Text(String(localized: "settings.barWindow", bundle: .module)).foregroundStyle(.secondary)
+                    Picker("", selection: $barWindowSource) {
+                        ForEach(BarWindowSource.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    }.labelsHidden().frame(width: 160)
+                    Spacer()
+                }
+                .onChange(of: barWindowSource) { _, _ in onAppearanceChanged() }
             }
 
             Divider()
