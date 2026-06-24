@@ -47,3 +47,38 @@ import Foundation
     var comps = DateComponents(); comps.year = 2026; comps.month = 6; comps.day = 23; comps.hour = 12
     #expect(CodexTokenScanner(sessionsDir: tmp).todayUsage(now: cal.date(from: comps)!) == nil)
 }
+
+@Test func codexRangeUsageSečteSoubotyVRozsahu() throws {
+    let cal = Calendar.current
+    var c = DateComponents(); c.year = 2026; c.month = 6; c.day = 20; c.hour = 12
+    let day20 = cal.date(from: c)!
+    let day10 = cal.date(byAdding: .day, value: -10, to: day20)!   // v rozsahu
+    let day40 = cal.date(byAdding: .day, value: -40, to: day20)!   // mimo (>30 dní)
+
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("codexRange-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    func write(_ name: String, mtime: Date, input: Int, output: Int) throws {
+        let f = tmp.appendingPathComponent(name)
+        try """
+        {"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":\(input),"cached_input_tokens":0,"output_tokens":\(output),"reasoning_output_tokens":0}}}}
+        """.data(using: .utf8)!.write(to: f)
+        try FileManager.default.setAttributes([.modificationDate: mtime], ofItemAtPath: f.path)
+    }
+    try write("a.jsonl", mtime: day10, input: 100, output: 50)   // v rozsahu
+    try write("b.jsonl", mtime: day40, input: 999, output: 999)  // mimo rozsah
+
+    let start = cal.date(byAdding: .day, value: -30, to: day20)!
+    let r = try #require(CodexTokenScanner(sessionsDir: tmp).rangeUsage(start: start, end: day20))
+    #expect(r.total.realTokens == 150)            // jen a.jsonl (100+50)
+    #expect(r.perModel.first?.modelName == "codex")
+}
+
+@Test func codexRangeUsagePrázdnýRozsahNil() throws {
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("codexRangeEmpty-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    #expect(CodexTokenScanner(sessionsDir: tmp).rangeUsage(start: now.addingTimeInterval(-30*86400), end: now) == nil)
+}

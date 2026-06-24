@@ -8,10 +8,17 @@ public struct CodexTokenScanner: Sendable {
             .appendingPathComponent(".codex/sessions")
         self.maxFilesToScan = maxFilesToScan
     }
-    /// Sečte dnešní Codex tokeny (z dnešních sessionů, finální total per soubor). Nil, pokud nic.
-    /// POZN. (F3, akceptováno): session přes půlnoc přičte i včerejší tokeny do „dnes" — kumulativní total.
+
+    /// Sečte dnešní Codex tokeny (finální total per dnešní soubor). Nil, pokud nic.
     public func todayUsage(now: Date, calendar: Calendar = .current) -> TodayUsage? {
         let dayStart = calendar.startOfDay(for: now)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return nil }
+        return rangeUsage(start: dayStart, end: dayEnd)
+    }
+
+    /// Sečte Codex tokeny přes session soubory s mtime v [start, end). Finální `lastTotal` per soubor.
+    /// POZN. (R5, akceptováno): kumulativní total → session přes hranici okna přičte i tokeny mimo rozsah.
+    public func rangeUsage(start: Date, end: Date) -> TodayUsage? {
         var sum = TokenUsage.zero
         var any = false
         guard let en = FileManager.default.enumerator(at: sessionsDir,
@@ -19,7 +26,7 @@ public struct CodexTokenScanner: Sendable {
         var files: [(URL, Date)] = []
         for case let url as URL in en where url.pathExtension == "jsonl" {
             if let m = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
-               m >= dayStart {
+               m >= start, m < end {
                 files.append((url, m))
             }
         }
