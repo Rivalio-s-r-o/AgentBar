@@ -30,6 +30,6 @@ public struct CodexTokenScanner: Sendable {
         }
         guard any else { return nil }
         let perModel = [ModelTokens(modelName: "codex", tokens: sum)]
-        return TodayUsage(perModel: perModel, estimatedCost: PricingEstimator.estimate(perModel))
+        return TodayUsage(perModel: perModel, estimatedCost: PricingEstimator.estimateReal(perModel))
     }
 }

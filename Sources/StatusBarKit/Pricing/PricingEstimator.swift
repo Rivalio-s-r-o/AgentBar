@@ -11,4 +11,14 @@ public enum PricingEstimator {
     public static func estimate(_ perModel: [ModelTokens]) -> Decimal {
         perModel.reduce(Decimal(0)) { $0 + estimate($1.tokens, model: $1.modelName) }
     }
+    /// Reálná cena: jen input+output tokeny (přijaté+odeslané), BEZ cache. Pro „co nejvíc reálná spotřeba".
+    public static func estimateReal(_ tokens: TokenUsage, model: String) -> Decimal {
+        guard let p = PricingTable.pricing(forModel: model) else { return 0 }
+        let perMillion = Decimal(1_000_000)
+        func part(_ count: UInt, _ price: Decimal) -> Decimal { (Decimal(count) / perMillion) * price }
+        return part(tokens.input, p.input) + part(tokens.output, p.output)
+    }
+    public static func estimateReal(_ perModel: [ModelTokens]) -> Decimal {
+        perModel.reduce(Decimal(0)) { $0 + estimateReal($1.tokens, model: $1.modelName) }
+    }
 }

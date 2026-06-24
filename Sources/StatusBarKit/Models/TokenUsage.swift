@@ -26,7 +26,7 @@ public struct ModelTokens: Sendable, Equatable {
 
 public struct TodayUsage: Sendable, Equatable {
     public let perModel: [ModelTokens]
-    public let estimatedCost: Decimal
+    public let estimatedCost: Decimal   // reálná cena: jen input+output, BEZ cache (PricingEstimator.estimateReal)
     public init(perModel: [ModelTokens], estimatedCost: Decimal) {
         self.perModel = perModel; self.estimatedCost = estimatedCost
     }

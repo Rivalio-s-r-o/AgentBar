@@ -30,6 +30,6 @@ public struct ClaudeTokenScanner: Sendable {
             .map { ModelTokens(modelName: $0.key, tokens: $0.value) }
             .sorted { $0.modelName < $1.modelName }
         guard !perModel.isEmpty else { return nil }
-        return TodayUsage(perModel: perModel, estimatedCost: PricingEstimator.estimate(perModel))
+        return TodayUsage(perModel: perModel, estimatedCost: PricingEstimator.estimateReal(perModel))
     }
 }
