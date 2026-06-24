@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Přidat do popoveru 30denní reálnou cenu + měsíční projekci (off-main, throttlovaně) a poté lokalizovat celou aplikaci do en/cs.
+**Goal:** Přidat do popoveru 30denní reálnou cenu (off-main, throttlovaně) a poté lokalizovat celou aplikaci do en/cs.
 
 **Architecture:** v0.9b — skenery dostanou `rangeUsage(start:end:)` (DRY refaktor sdílený s `todayUsage`); 30denní data tečou samostatným `CostHistoryStore` (Kit, `@MainActor ObservableObject`) s off-main `Task.detached` computem a throttle 6 h, mimo rychlou collector cestu. v0.9c — `defaultLocalization:"en"` + `Localizable.strings` (en base / cs) v OBOU targetech; Kit formattery dostanou injektovatelný `bundle: Bundle = .module` (default = Kit bundle) pro deterministické testy.
 
@@ -16,56 +16,89 @@
 - **Cena = reálná spotřeba:** vždy `PricingEstimator.estimateReal` (jen input+output, BEZ cache) — konzistentní s v0.8a.
 - **NElokalizovat:** symbol `$` (USD odhad), názvy plánů (Max/Pro/Free/Team/Enterprise), názvy modelů, MenuBar `"—"` (univerzální), čistě numerické formáty bez slov (`"2h 14m"`, `"41m"`).
 - **Default bundle pattern:** Kit formattery používají `bundle: Bundle = .module`; default `.module` se váže v místě DEFINICE (Kit) → App volá bez parametru a dostane Kit bundle; testy předávají `L10n.bundle("cs")`/`L10n.bundle("en")`.
-- **Verze:** na konci v0.9b bumpnout `Resources/Info.plist` na **0.8.2** (`CFBundleShortVersionString` + `CFBundleVersion`).
+- **Verze:** na konci v0.9b bumpnout `Resources/Info.plist` na **0.9.0** (`CFBundleShortVersionString` + `CFBundleVersion`) — milník v0.9b+c (CP2 F6).
 - **Agent NESPOUŠTÍ GUI `.app`** — jen `swift build`/`swift test` (případně `scripts/make-app.sh` jako build-check); reálné spuštění dělá uživatel.
 
 ---
 
-## Část A — v0.9b: 30denní cena + projekce (Tasky 1–5)
+## Plan-forge hardening (AUDIT 2026-06-24, depth standard)
 
-### Task 1: `PeriodCost` model + `CostProjection`
+> Executor: subagent-driven-development (implementer Sonnet + reviewer Opus/Sonnet per task, finální Opus review). 0 CRIT/HIGH. Rizikové SwiftPM předpoklady empiricky ověřeny PŘED tímto hardeningem.
+
+### Assumptions
+| # | Předpoklad | Stav | Jak ověřeno |
+|---|------------|------|-------------|
+| A1 | `.process("Resources")` + `.lproj/Localizable.strings` + `defaultLocalization:"en"` funguje v čistém SwiftPM pro Kit i executable App | **verified** | forge: dočasný scaffolding → `swift build` vygeneroval `resource_bundle_accessor` pro OBA targety; `_ForgeAppLocCheck` (ref `Bundle.module`) zkompiloval |
+| A2 | `L10n.bundle("cs")` injekce do `NSLocalizedString(bundle:)` vrací cílový jazyk; `%lld` přes `String(format:)` funguje | **verified** | forge test `forgeLokalizacePipeline`: „pong-cs"/„pong-en" + „před 5 min"/„5 min ago" — PASS |
+| A3 | `var displayName` + `func displayName(bundle:)` koexistují; `SettingsView` call-site (jediný) volá property beze změny | **verified** | `swiftc` scratch → tisk „f f"; grep: jediný call-site `SettingsView.swift:35` |
+| A4 | Exact-text asserce mají JEN 4 testy (RelativeTime/Pace/Formatting/MenuBarStyle); collector + AlertEvaluator + CodexUsageAPI asertují case/strukturu | **verified** | čtení testů; `CodexUsageAPITests` zásah „okno" je komentář (ř. 44) |
+| A5 | `Task.detached(.utility)` + `@Sendable` provider zachytávající Sendable scanner structs + `@MainActor` store projde Swift 6 strict | **verified** | forge testy `forgeCostHistory`/`forgeDetachedProviderConcurrency` — PASS |
+| A6 | Default `bundle: Bundle = .module` se váže v Kitu → App call-sites bez parametru dostanou Kit bundle; Task 5 (pre-Task-7) volání formatterů bez `bundle:` přežijí přidání default paramu | **verified** | default arg sémantika + A2 (Kit `.module` resolvován v Kitu) |
+| A7 | Codex 30denní sken s rozumným počtem souborů (mtime ∈ 30 dní) je perf-akceptovatelný off-main+throttle | **accepted (F1 mitig.)** | cap 1000 backstop; mtime-rozsah filtruje; off-main `.utility`; throttle 6 h |
+
+### Guardrails
+- **Zakázáno:** měnit jakýkoli auth/credential/network/refresh kód (mimo rozsah); logovat surový obsah konverzací; psát do `~/.claude`/`~/.codex`; spouštět GUI `.app`; pushovat bez explicitního souhlasu uživatele.
+- **⚠ Nevratné:** žádné v tomto plánu (jen lokální kód + testy; vše revertovatelné `git`).
+- **Globální stop podmínky:** (1) **Task 6 canary FAIL** (lokalizace se nepřeloží) → ZASTAV, eskaluj (fallback `.xcstrings`/en-only) — NEpokračuj na 7–9. (2) Po kterémkoli tasku `swift test` červené a nejde opravit dle „On failure" → ZASTAV a nahlas. (3) `swift build` selže s concurrency chybou v Task 4/5 → ZASTAV (A5 to vylučuje, ale kdyby).
+- **Kill criteria:** pokud po **2 re-implementačních smyčkách** kteréhokoli tasku stále neprochází `swift test`, nebo pokud lokalizační pipeline (Task 6) selže i po fallbacku — CELÝ v0.9c blok (Tasky 6–9) se odloží, v0.9b (1–5) se mergne samostatně, a v0.9c se vrátí do forge. Datum přezkumu: pokud exekuce nedojde do konce v rámci této session, stav je v ledgeru a pokračuje se příště.
+
+### Risk Register
+| ID | Sev | Lik | Riziko | Mitigace (krok) | Resolution |
+|----|-----|-----|--------|------------------|------------|
+| F1 | MED | M | Codex 30d sken neomezený (6–9MB/soubor) | cap 1000 + mtime-rozsah + off-main (Task 5 Step 3) | fixed-in-Task5 |
+| F2 | MED | M | Nejednoznačná instrukce init pro levný executor | předepsán `override init()` (Task 5 Step 3) | fixed-in-Task5 |
+| F3 | MED | M | Vynechaný český literál neviditelný buildem | grep-check (Task 9 Step 3) | fixed-in-Task9 |
+| F4 | LOW | L | Dvojitý compute kdyby `isComputing` po `await` | komentář + struktura (Task 4 Step 3) | fixed-in-Task4 |
+| F5 | LOW | — | Projekce ≈ 30d číslo (matoucí) | ZAHOZENA (CP2) | accepted-by-user |
+| F6 | LOW | — | Verzování b+c v jednom merge | verze 0.9.0 (CP2) | accepted-by-user |
+| R5 | LOW | L | Codex kumulativní total přes hranici okna | akceptováno (jako v0.2 F3); u 30d zanedbatelné | accepted |
+
+### Audit Trail
+- **Lenses:** 1 (failure) → F1/F4; 2 (security) → N/A (read-only čísla, žádné credentials/síť/destrukce — surface beze změny vůči v0.2); 3 (assumptions) → A1–A7 (vše verified/accepted); 4 (deps) → ordering OK (default `bundle:` chrání Task 5 call-sites; rangeUsage před Task 5); 5 (alternatives) → .strings vs .xcstrings (verified .strings; .xcstrings fallback), persist-to-disk cache (YAGNI); 6 (executor) → F2/F3; 7 (goal) → F5/F6.
+- **Findings:** 6 (4 MED-empiricky-snížené na polish, 2 LOW-rozhodnutí) → 4 fixed, 2 accepted-by-user. 0 CRIT/HIGH.
+- **Re-audit (R*):** po hardeningu žádné nové defekty (drop projekce zjednodušil; override init standardní vzor; cap konstanta).
+- **Tabletop dry run:** PASSED — Task 1(PeriodCost)→2/3(rangeUsage)→4(store)→5(App: provider užívá rangeUsage+PeriodCost+store; PopoverView monthRow; 0.9.0)→6(scaffold+canary gate)→7(formattery+L10n)→8(App stringy vč. monthRow klíčů z T5)→9(úplnost+grep). Identifikátory konzistentní; žádný krok nezávisí na pozdějším.
+- **Klíčové změny vs draft v0:** F5→projekce a celý `CostProjection` odstraněny (Task 1 jen PeriodCost; monthRow bez /měs); F6→verze 0.9.0; F1→Codex cap 1000; F2→`override init()` napevno; F3→grep-check v Task 9; F4→komentář.
+- **Rozhodnutí uživatele (CP2):** F5 zahodit projekci; F6 verze 0.9.0.
+- **Sledovat při exekuci:** Task 6 canary (gate); perf prvního popover-open (uživatel ověří, že 30d sken nezpomalí).
+
+---
+
+## Část A — v0.9b: 30denní cena (Tasky 1–5)
+
+### Task 1: `PeriodCost` model
+
+> CP2 F5: projekce ZAHOZENA → žádný `CostProjection`. Jen `PeriodCost` (30denní cena = trailing 30 dní, bez /měs řádku).
 
 **Files:**
 - Create: `Sources/StatusBarKit/Models/PeriodCost.swift`
-- Create: `Sources/StatusBarKit/Pricing/CostProjection.swift`
-- Test: `Tests/StatusBarKitTests/CostProjectionTests.swift`
+- Test: `Tests/StatusBarKitTests/PeriodCostTests.swift`
 
 **Interfaces:**
-- Produces: `struct PeriodCost: Sendable, Equatable { let tokens: TokenUsage; let cost: Decimal; init(tokens:cost:) }`; `enum CostProjection { static func monthly(cost: Decimal, days: Double) -> Decimal; static func monthlyTokens(_ tokens: UInt, days: Double) -> UInt }`.
+- Produces: `struct PeriodCost: Sendable, Equatable { let tokens: TokenUsage; let cost: Decimal; init(tokens:cost:) }`.
 - Consumes: `TokenUsage` (existující).
 
 - [ ] **Step 1: Write the failing test**
 
 ```swift
-// Tests/StatusBarKitTests/CostProjectionTests.swift
+// Tests/StatusBarKitTests/PeriodCostTests.swift
 import Testing
 import Foundation
 @testable import StatusBarKit
-
-@Test func projekceMěsícCena() {
-    // 300 / 30 dní = 10/den × 30.4 = 304
-    #expect(CostProjection.monthly(cost: Decimal(300), days: 30) == Decimal(304))
-    #expect(CostProjection.monthly(cost: 0, days: 30) == 0)
-    #expect(CostProjection.monthly(cost: Decimal(100), days: 0) == 0)   // ochrana dělení nulou
-}
-
-@Test func projekceMěsícTokeny() {
-    #expect(CostProjection.monthlyTokens(300, days: 30) == 304)
-    #expect(CostProjection.monthlyTokens(0, days: 30) == 0)
-    #expect(CostProjection.monthlyTokens(100, days: 0) == 0)
-}
 
 @Test func periodCostRovnost() {
     let a = PeriodCost(tokens: TokenUsage(input: 10, output: 20), cost: Decimal(5))
     let b = PeriodCost(tokens: TokenUsage(input: 10, output: 20), cost: Decimal(5))
     #expect(a == b)
+    #expect(a.tokens.realTokens == 30)
+    #expect(a.cost == Decimal(5))
 }
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `swift test`
-Expected: FAIL — „cannot find 'CostProjection'/'PeriodCost' in scope".
+Expected: FAIL — „cannot find 'PeriodCost' in scope".
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -83,34 +116,16 @@ public struct PeriodCost: Sendable, Equatable {
 }
 ```
 
-```swift
-// Sources/StatusBarKit/Pricing/CostProjection.swift
-import Foundation
-
-/// Extrapolace na měsíc z období (denní průměr × 30.4). Pure.
-public enum CostProjection {
-    public static func monthly(cost: Decimal, days: Double) -> Decimal {
-        guard days > 0 else { return 0 }
-        // přesné: cost × 304 / (days × 10) = cost/days × 30.4 (bez Double→Decimal nepřesnosti)
-        return cost * Decimal(304) / (Decimal(days) * 10)
-    }
-    public static func monthlyTokens(_ tokens: UInt, days: Double) -> UInt {
-        guard days > 0 else { return 0 }
-        return UInt((Double(tokens) / days * 30.4).rounded())
-    }
-}
-```
-
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `swift test`
-Expected: PASS (všechny dosavadní + 3 nové).
+Expected: PASS (všechny dosavadní + 1 nový).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Sources/StatusBarKit/Models/PeriodCost.swift Sources/StatusBarKit/Pricing/CostProjection.swift Tests/StatusBarKitTests/CostProjectionTests.swift
-git commit -m "feat: PeriodCost model + CostProjection (měsíční extrapolace)"
+git add Sources/StatusBarKit/Models/PeriodCost.swift Tests/StatusBarKitTests/PeriodCostTests.swift
+git commit -m "feat: PeriodCost model (30denní cena)"
 ```
 
 ---
@@ -465,6 +480,9 @@ public final class CostHistoryStore: ObservableObject {
     /// Awaitable výpočet (pro testy i interně). Respektuje throttle.
     public func refresh(now: Date) async {
         guard shouldRefresh(now: now) else { return }
+        // POZN. (F4): `isComputing = true` MUSÍ být nastaveno SYNCHRONNĚ před prvním `await`.
+        // Na @MainActor tím druhý souběžný refreshIfStale (start + popover-open) uvidí isComputing==true
+        // ve svém shouldRefresh a vrátí se → žádný dvojitý compute. Nepřehazovat pořadí.
         isComputing = true
         let h = await provider(now)
         history = h
@@ -493,16 +511,16 @@ git commit -m "feat: CostHistoryStore (throttle + off-main async + published 30d
 
 ---
 
-### Task 5: App wiring + PopoverView 30denní řádek + verze 0.8.2
+### Task 5: App wiring + PopoverView 30denní řádek + verze 0.9.0
 
 **Files:**
 - Modify: `Sources/StatusBarApp/AppDelegate.swift`
 - Modify: `Sources/StatusBarApp/MenuBarController.swift:16-37` (přidat `costHistory` do init + PopoverView)
 - Modify: `Sources/StatusBarApp/PopoverView.swift`
-- Modify: `Resources/Info.plist` (verze 0.8.2)
+- Modify: `Resources/Info.plist` (verze 0.9.0)
 
 **Interfaces:**
-- Consumes: `CostHistoryStore`, `PeriodCost`, `CostProjection` (Tasky 1,4), `ClaudeTokenScanner.rangeUsage`/`CodexTokenScanner.rangeUsage` (Tasky 2,3).
+- Consumes: `CostHistoryStore`, `PeriodCost` (Tasky 1,4), `ClaudeTokenScanner.rangeUsage`/`CodexTokenScanner.rangeUsage` (Tasky 2,3).
 - Produces: nic pro pozdější tasky (koncový App task v0.9b).
 
 Toto je App-integrační task — ověření je **build + smoke** (`swift build`, volitelně `scripts/make-app.sh` jako build-check). GUI NESPOUŠTĚT.
@@ -563,8 +581,7 @@ Přidej nový `@ViewBuilder` (za `todayRow`):
                 Text("\(TokenFormatter.compact(p.tokens.realTokens)) tok ≈ \(TokenFormatter.money(p.cost))")
                     .font(.caption).fontWeight(.medium)
             }
-            Text("≈ \(TokenFormatter.money(CostProjection.monthly(cost: p.cost, days: 30)))/měs")
-                .font(.caption2).foregroundStyle(.tertiary)
+            // CP2 F5: ŽÁDNÝ /měs projekční řádek — jen trailing 30denní číslo.
         } else if isComputingPeriod {
             Text("30 dní: počítám…").font(.caption2).foregroundStyle(.tertiary)
         }
@@ -602,7 +619,7 @@ V `Sources/StatusBarApp/MenuBarController.swift` uprav `init` (přidej parametr 
 
 - [ ] **Step 3: `AppDelegate` — zkonstruovat `CostHistoryStore` + triggery**
 
-V `Sources/StatusBarApp/AppDelegate.swift` přidej property a wiring:
+V `Sources/StatusBarApp/AppDelegate.swift` přidej property `costHistory` (mezi `store` a `prefs`):
 
 ```swift
     private let store = UsageStore()
@@ -610,12 +627,12 @@ V `Sources/StatusBarApp/AppDelegate.swift` přidej property a wiring:
     private let prefs = PreferencesStore()
 ```
 
-Přidej `override init()` (nebo nech default a inicializuj `costHistory` v `applicationDidFinishLaunching` jako `var`; preferuj stored let s init). Vlož inicializátor:
+Přidej **`override init()`** (CP2 F2 — přesně tento tvar, ŽÁDNÁ alternativa). `costHistory` je `let` bez inline initializeru → musí se nastavit zde před `super.init()`. Closure zachytává LOKÁLNÍ Sendable scannery (ne `self`):
 
 ```swift
     override init() {
         let claudeScanner = ClaudeTokenScanner()
-        let codexScanner = CodexTokenScanner(maxFilesToScan: .max)   // 30denní: bez stropu (off-main, throttle)
+        let codexScanner = CodexTokenScanner(maxFilesToScan: 1000)   // CP2 F1: backstop cap; mtime-rozsah už filtruje 30 dní
         costHistory = CostHistoryStore(provider: { now in
             let start = now.addingTimeInterval(-30 * 86400)
             return await Task.detached(priority: .utility) {
@@ -653,9 +670,9 @@ V `applicationDidFinishLaunching` uprav konstrukci `menuBar` (předej `costHisto
 
 > POZN.: 60s timer **nikdy** nevolá `costHistory.refreshIfStale()` — 30denní sken jen start + popover-open (throttle 6h).
 
-- [ ] **Step 4: Verze 0.8.2**
+- [ ] **Step 4: Verze 0.9.0**
 
-V `Resources/Info.plist` změň `CFBundleShortVersionString` a `CFBundleVersion` z `0.8.1` na `0.8.2`.
+V `Resources/Info.plist` změň `CFBundleShortVersionString` a `CFBundleVersion` z `0.8.1` na `0.9.0` (CP2 F6 — milník v0.9b+c).
 
 - [ ] **Step 5: Build + smoke**
 
@@ -673,7 +690,7 @@ Expected: vytvoří `.app` bez chyby. **NESPOUŠTĚT** — restart lišty dělá
 
 ```bash
 git add Sources/StatusBarApp/PopoverView.swift Sources/StatusBarApp/MenuBarController.swift Sources/StatusBarApp/AppDelegate.swift Resources/Info.plist
-git commit -m "feat: 30denní cena+projekce v popoveru (off-main CostHistoryStore), verze 0.8.2"
+git commit -m "feat: 30denní cena v popoveru (off-main CostHistoryStore), verze 0.9.0"
 ```
 
 ---
@@ -1086,7 +1103,7 @@ git commit -m "feat: lokalizace Kit formatterů (en/cs) přes injektovatelný bu
 
 - [ ] **Step 1: `PopoverView.swift` — nahraď user-facing literály klíči**
 
-Mapování (klíč → kde): `popover.title`("Spotřeba"), `popover.todaytotal`("Dnes ≈ %@"), `popover.loading`("Načítám…"), `popover.link.anthropic`("Stav Anthropic"), `popover.link.openai`("Stav OpenAI"), `popover.link.usageClaude`("Usage Claude"), `popover.link.usageOpenai`("Usage OpenAI"), `popover.settings`("Nastavení…"), `popover.quit`("Konec"), `popover.updated`("Aktualizováno %@"), `popover.today`("Dnes"), `popover.today.detail`("%@ tok (+%@ cache) ≈ %@"), `popover.remaining`("%lld%% zbývá" → pozor: zdroj počítá Int, ne fraction), `popover.pace`("Tempo: %@"), `popover.month`("30 dní"), `popover.month.detail`("%@ tok ≈ %@"), `popover.month.projection`("≈ %@/měs"), `popover.computing`("30 dní: počítám…").
+Mapování (klíč → kde): `popover.title`("Spotřeba"), `popover.todaytotal`("Dnes ≈ %@"), `popover.loading`("Načítám…"), `popover.link.anthropic`("Stav Anthropic"), `popover.link.openai`("Stav OpenAI"), `popover.link.usageClaude`("Usage Claude"), `popover.link.usageOpenai`("Usage OpenAI"), `popover.settings`("Nastavení…"), `popover.quit`("Konec"), `popover.updated`("Aktualizováno %@"), `popover.today`("Dnes"), `popover.today.detail`("%@ tok (+%@ cache) ≈ %@"), `popover.remaining`("%lld%% zbývá" → pozor: zdroj počítá Int, ne fraction), `popover.pace`("Tempo: %@"), `popover.month`("30 dní"), `popover.month.detail`("%@ tok ≈ %@"), `popover.computing`("30 dní: počítám…").
 
 Konkrétní náhrady (klíčové řádky):
 ```swift
@@ -1114,10 +1131,9 @@ Text(String(format: NSLocalizedString("popover.today.detail", bundle: .module, c
 Text(String(format: NSLocalizedString("popover.remaining", bundle: .module, comment: ""), max(0, 100 - Int((w.usedFraction*100).rounded()))))
 // windowsList "Tempo:":
 Text(String(format: NSLocalizedString("popover.pace", bundle: .module, comment: ""), PaceLabel.text(deltaPercent: d)))
-// monthRow (z Tasku 5):
+// monthRow (z Tasku 5; CP2 F5 — žádný projekční řádek):
 Text(String(localized: "popover.month", bundle: .module))   // "30 dní"
 Text(String(format: NSLocalizedString("popover.month.detail", bundle: .module, comment: ""), TokenFormatter.compact(p.tokens.realTokens), TokenFormatter.money(p.cost)))
-Text(String(format: NSLocalizedString("popover.month.projection", bundle: .module, comment: ""), TokenFormatter.money(CostProjection.monthly(cost: p.cost, days: 30))))
 Text(String(localized: "popover.computing", bundle: .module))   // "30 dní: počítám…"
 ```
 
@@ -1169,7 +1185,6 @@ Najdi `"StatusBar — Nastavení"` a nahraď: `String(localized: "window.setting
 "popover.pace" = "Pace: %@";
 "popover.month" = "30 days";
 "popover.month.detail" = "%@ tok ≈ %@";
-"popover.month.projection" = "≈ %@/mo";
 "popover.computing" = "30 days: computing…";
 
 "settings.title" = "Settings";
@@ -1217,7 +1232,6 @@ Najdi `"StatusBar — Nastavení"` a nahraď: `String(localized: "window.setting
 "popover.pace" = "Tempo: %@";
 "popover.month" = "30 dní";
 "popover.month.detail" = "%@ tok ≈ %@";
-"popover.month.projection" = "≈ %@/měs";
 "popover.computing" = "30 dní: počítám…";
 
 "settings.title" = "Nastavení";
@@ -1297,7 +1311,17 @@ private func keys(_ langBundle: Bundle) -> Set<String> {
 Run: `swift test`
 Expected: PASS. Pokud FAIL → doplň chybějící klíče do příslušného `.strings`, znovu `swift test`.
 
-- [ ] **Step 3: Finální smoke (build + bundle check)**
+- [ ] **Step 3: F3 — mechanický grep na VYNECHANÉ české literály**
+
+Vynechaný natvrdo-český literál (v en režimu ukáže česky) build nechytí. Grep zdroje:
+
+Run:
+```bash
+grep -rn "Spotřeba\|Načítám\|Nastavení\|Konec\|Tempo\|zbývá\|počítám\|napřed\|pozadu\|v tempu\|5h okno\|Týden\|právě teď\|Otevři\|Spusť\|Data stará\|nenalezen\|Zbývá\|Spouštět\|Upozorni\|Práh\|Zobrazení lišty\|Vyčerpané\|Zbývající\|Číslo ukazuje\|sessionech\|Dnes\|před " Sources/StatusBarKit Sources/StatusBarApp
+```
+Expected: každý zásah je v KOMENTÁŘI (`//`) — NE v `Text(...)`, `NSLocalizedString` defaultu, ani vraceném string literálu. Pokud je zásah v živém kódu → byl vynechán; doplň lokalizační klíč a opakuj.
+
+- [ ] **Step 4: Finální smoke (build + bundle check)**
 
 Run: `swift build && swift test`
 Expected: vše zelené (cílově ~133+ testů: 119 původních + nové z Tasků 1–9).
@@ -1306,7 +1330,7 @@ Expected: vše zelené (cílově ~133+ testů: 119 původních + nové z Tasků 
 Run: `bash scripts/make-app.sh`
 Expected: `.app` vytvořen. **NESPOUŠTĚT.** Vizuální ověření cs/en (přepnutí jazyka macOS) + 30denní řádek dělá uživatel.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add Tests/StatusBarKitTests/LocalizationCompletenessTests.swift
@@ -1317,7 +1341,7 @@ git commit -m "test: kontrola úplnosti lokalizačních klíčů en↔cs"
 
 ## Verifikace plánu (self-review)
 
-- **Spec coverage:** v0.9b §2 → Tasky 1–5 (PeriodCost/CostProjection, rangeUsage Claude/Codex, CostHistoryStore, App wiring+PopoverView). v0.9c §3 → Tasky 6–9 (scaffolding+canary, Kit formattery, App stringy, úplnost). Perf (off-main/throttle/ne-60s) → Task 4+5. Projekce → Task 1+5. Injektovatelný bundle → Task 6+7. R-OVĚŘENÍ pipeline → Task 6 (gate). NElokalizovat ($/plány/modely/„—") → Global Constraints + Task 7/8 pozn.
-- **Typová konzistence:** `PeriodCost(tokens:cost:)`, `CostProjection.monthly(cost:days:)`, `rangeUsage(start:end:)`, `CostHistoryStore(staleInterval:provider:)`/`refresh(now:)`/`refreshIfStale(now:)`/`shouldRefresh(now:)`, `L10n.bundle(_:)`, formatter `bundle:` overloady, `MenuBarStyle.displayName(bundle:)` + `var displayName` — používány konzistentně napříč tasky a testy.
+- **Spec coverage:** v0.9b §2 → Tasky 1–5 (PeriodCost, rangeUsage Claude/Codex, CostHistoryStore, App wiring+PopoverView). v0.9c §3 → Tasky 6–9 (scaffolding+canary, Kit formattery, App stringy, úplnost). Perf (off-main/throttle/ne-60s) → Task 4+5. Injektovatelný bundle → Task 6+7. R-OVĚŘENÍ pipeline → Task 6 (gate). NElokalizovat ($/plány/modely/„—") → Global Constraints + Task 7/8 pozn. CP2 F5: projekce zahozena (jen trailing 30 dní).
+- **Typová konzistence:** `PeriodCost(tokens:cost:)`, `rangeUsage(start:end:)`, `CostHistoryStore(staleInterval:provider:)`/`refresh(now:)`/`refreshIfStale(now:)`/`shouldRefresh(now:)`, `L10n.bundle(_:)`, formatter `bundle:` overloady, `MenuBarStyle.displayName(bundle:)` + `var displayName` — používány konzistentně napříč tasky a testy.
 - **TodayUsage reuse:** `rangeUsage` vrací `TodayUsage?` (interní agregát); display vrstva mapuje na `PeriodCost`. Hlídá review (R3).
 - **Pořadí:** v0.9b první (zavede „30 dní"/„počítám…" stringy) → v0.9c je lokalizuje (Task 8 monthRow klíče). Task 6 je gate před 7–9.
