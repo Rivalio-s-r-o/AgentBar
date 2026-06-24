@@ -38,3 +38,18 @@ import Foundation
     ]
     #expect(PricingEstimator.estimateReal(perModel) == Decimal(8))
 }
+
+@Test func odhadCacheWriteSonnetHaiku() {
+    // Sonnet cacheWrite 3.75 / 1M; Haiku cacheWrite 1.25 / 1M (plná estimate)
+    #expect(PricingEstimator.estimate(TokenUsage(cacheWrite: 1_000_000), model: "claude-sonnet-4-6") == Decimal(string: "3.75")!)
+    #expect(PricingEstimator.estimate(TokenUsage(cacheWrite: 1_000_000), model: "claude-haiku-4-5") == Decimal(string: "1.25")!)
+}
+
+@Test func pricingTableGPT5Větve() {
+    let g5 = PricingTable.pricing(forModel: "gpt-5")
+    #expect(g5?.input == Decimal(string: "2.5")!)
+    #expect(g5?.output == Decimal(15))
+    let g55 = PricingTable.pricing(forModel: "gpt-5.5")
+    #expect(g55?.input == Decimal(5))
+    #expect(g55?.output == Decimal(30))
+}

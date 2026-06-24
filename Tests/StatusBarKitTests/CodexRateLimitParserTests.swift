@@ -35,3 +35,16 @@ private func fx(_ n: String) throws -> Data {
     let five = snap?.windows.first { $0.kind == .rolling5h }
     #expect(abs((five?.usedFraction ?? -1) - 0.42) < 0.0001)
 }
+
+@Test func codexRateLimitParserJenSekundární() {
+    let line = #"{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":null,"secondary":{"used_percent":30.0,"window_minutes":10080,"resets_at":1},"plan_type":"plus"}}}"#
+    let snap = CodexRateLimitParser.latestSnapshot(fromJSONL: Data(line.utf8))
+    #expect(snap?.windows.count == 1)
+    #expect(snap?.windows.first?.kind == .weekly(scope: nil))
+}
+
+@Test func codexRateLimitParserObaUsedPercentNil() {
+    // primary i secondary existují, ale oba bez used_percent → windows prázdné → nil
+    let line = #"{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"window_minutes":300,"resets_at":1},"secondary":{"window_minutes":10080,"resets_at":1},"plan_type":"plus"}}}"#
+    #expect(CodexRateLimitParser.latestSnapshot(fromJSONL: Data(line.utf8)) == nil)
+}

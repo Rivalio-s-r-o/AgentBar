@@ -19,3 +19,20 @@ import Foundation
     #expect(ClaudePlan.label(forSubscriptionType: "") == nil)
     #expect(ClaudePlan.label(forSubscriptionType: "custom") == "Custom")
 }
+
+@Test func apiParserHodíChybnýJSON() {
+    #expect(throws: (any Error).self) { _ = try ClaudeUsageCacheParser.parseAPIWindows(Data("nonsense".utf8)) }
+}
+
+@Test func apiParserPrázdnéLimitsPrázdnéPole() throws {
+    let w = try ClaudeUsageCacheParser.parseAPIWindows(Data(#"{"limits":[]}"#.utf8))
+    #expect(w.isEmpty)
+}
+
+@Test func apiParserNeznámýKindIgnorován() throws {
+    // kind "daily" není mapován → přeskočí; "session" zůstane
+    let json = #"{"limits":[{"kind":"daily","percent":50},{"kind":"session","percent":20}]}"#
+    let w = try ClaudeUsageCacheParser.parseAPIWindows(Data(json.utf8))
+    #expect(w.count == 1)
+    #expect(w.first?.kind == .rolling5h)
+}

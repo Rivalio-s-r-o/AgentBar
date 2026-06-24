@@ -39,3 +39,17 @@ import Foundation
     #expect(CodexPlan.label(forPlanType: "") == nil)
     #expect(CodexPlan.label(forPlanType: "business") == "Business")
 }
+
+@Test func codexAPIParserUsedPercentNilOknoNil() {
+    // primary bez used_percent → okno se nevytvoří; žádné secondary → nil
+    let data = Data(#"{"plan_type":"plus","rate_limit":{"primary_window":{"limit_window_seconds":18000,"reset_at":1}}}"#.utf8)
+    #expect(CodexUsageAPIParser.parse(data) == nil)
+}
+
+@Test func codexAPIParserLimitWindowSecondsNilJe5h() {
+    // primary bez limit_window_seconds → (nil ?? 0) < 86400 → .rolling5h
+    let data = Data(#"{"plan_type":"plus","rate_limit":{"primary_window":{"used_percent":50,"reset_at":1}}}"#.utf8)
+    let snap = CodexUsageAPIParser.parse(data)
+    #expect(snap?.windows.count == 1)
+    #expect(snap?.windows.first?.kind == .rolling5h)
+}

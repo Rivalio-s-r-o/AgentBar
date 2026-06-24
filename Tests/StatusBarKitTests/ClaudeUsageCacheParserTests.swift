@@ -27,3 +27,8 @@ private func fixture(_ n: String) throws -> Data {
 @Test func parseClaudeChybnýJSONHodí() {
     #expect(throws: (any Error).self) { _ = try ClaudeUsageCacheParser.parse(Data("nonsense".utf8)) }
 }
+
+@Test func parseClaudeStrukturálněNeúplnýHodí() {
+    // validní JSON, ale chybí povinné pole "data" → DecodingError (jiný případ než "nonsense")
+    #expect(throws: (any Error).self) { _ = try ClaudeUsageCacheParser.parse(Data(#"{"timestamp":123.0}"#.utf8)) }
+}

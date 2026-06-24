@@ -64,3 +64,11 @@ private struct FakeClaudeSource: ClaudeUsageSource {
     #expect(u.status == .ok)                                  // fallback na cache
     #expect(u.windows.isEmpty == false)
 }
+
+@Test func collectorPrázdnýSouborUnavailable() async throws {
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("cc-empty-\(UUID().uuidString).json")
+    try Data().write(to: tmp)                       // existující 0-bajtový soubor
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: .greatestFiniteMagnitude).fetch(includeToday: false)
+    if case .unavailable = u.status {} else { Issue.record("čekán .unavailable, byl \(u.status)") }
+}
