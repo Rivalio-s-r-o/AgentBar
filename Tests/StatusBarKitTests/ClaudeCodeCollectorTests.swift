@@ -39,3 +39,28 @@ private func copyFixtureToTemp() throws -> URL {
     let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: .greatestFiniteMagnitude).fetch(includeToday: false)
     #expect(u.today == nil)   // includeToday=false → scanner se nespustí
 }
+
+private struct FakeClaudeSource: ClaudeUsageSource {
+    let usage: ClaudeLiveUsage?
+    func fetchFresh() async -> ClaudeLiveUsage? { usage }
+}
+
+@Test func collectorPoužijeŽivýZdroj() async {
+    let fresh = ClaudeLiveUsage(
+        windows: [UsageWindow(kind: .rolling5h, usedFraction: 0.13, resetAt: nil)], planLabel: "Max")
+    let missing = FileManager.default.temporaryDirectory.appendingPathComponent("none-\(UUID().uuidString).json")
+    let u = await ClaudeCodeCollector(cachePath: missing, staleAfter: 999,
+        liveSource: FakeClaudeSource(usage: fresh)).fetch(includeToday: false)
+    #expect(u.status == .ok)                                  // živé, ne unavailable (i když cache chybí)
+    #expect(u.planLabel == "Max")
+    #expect(u.windows.first?.usedFraction == 0.13)
+}
+
+@Test func collectorFallbackNaCacheKdyžŽivýNil() async throws {
+    let tmp = try copyFixtureToTemp()
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    let u = await ClaudeCodeCollector(cachePath: tmp, staleAfter: .greatestFiniteMagnitude,
+        liveSource: FakeClaudeSource(usage: nil)).fetch(includeToday: false)
+    #expect(u.status == .ok)                                  // fallback na cache
+    #expect(u.windows.isEmpty == false)
+}
