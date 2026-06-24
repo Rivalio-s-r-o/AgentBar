@@ -79,13 +79,13 @@ final class MenuBarController {
                 title.append(NSAttributedString(string: s.text, attributes: [.foregroundColor: levelColor(s.level), .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)]))
             }
         }
-        if segs.isEmpty { title.append(NSAttributedString(string: "StatusBar")) }
+        if segs.isEmpty { title.append(NSAttributedString(string: NSLocalizedString("menubar.fallback", bundle: .module, comment: ""))) }
         statusItem.button?.attributedTitle = title
         statusItem.button?.toolTip = usages.map { u -> String in
             switch u.status {
-            case .ok: return "\(u.displayName): \(max(0, 100 - u.nearestLimitPercent)) % zbývá"
-            case .degraded(let m): return "\(u.displayName): ⚠︎ \(m)"
-            case .unavailable(let m): return "\(u.displayName): — \(m)"
+            case .ok: return String(format: NSLocalizedString("menubar.tooltip.ok", bundle: .module, comment: ""), u.displayName, max(0, 100 - u.nearestLimitPercent))
+            case .degraded(let m): return String(format: NSLocalizedString("menubar.tooltip.degraded", bundle: .module, comment: ""), u.displayName, m)
+            case .unavailable(let m): return String(format: NSLocalizedString("menubar.tooltip.unavailable", bundle: .module, comment: ""), u.displayName, m)
             }
         }.joined(separator: "\n")
     }

@@ -17,9 +17,9 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Nastavení").font(.title3).fontWeight(.semibold)
+            Text(String(localized: "settings.title", bundle: .module)).font(.title3).fontWeight(.semibold)
 
-            Toggle("Spouštět při přihlášení", isOn: $launchAtLogin)
+            Toggle(String(localized: "settings.launch", bundle: .module), isOn: $launchAtLogin)
                 .onChange(of: launchAtLogin) { _, on in
                     LaunchAtLogin.setEnabled(on)
                     launchAtLogin = LaunchAtLogin.isEnabled   // srovnej podle reálného stavu
@@ -28,9 +28,9 @@ struct SettingsView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Zobrazení lišty").font(.headline)
+                Text(String(localized: "settings.bar", bundle: .module)).font(.headline)
                 HStack {
-                    Text("Styl").foregroundStyle(.secondary)
+                    Text(String(localized: "settings.style", bundle: .module)).foregroundStyle(.secondary)
                     Picker("", selection: $barStyle) {
                         ForEach(MenuBarStyle.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }.labelsHidden().frame(width: 160)
@@ -38,10 +38,10 @@ struct SettingsView: View {
                 }
                 .onChange(of: barStyle) { _, _ in onAppearanceChanged() }
                 HStack {
-                    Text("Číslo ukazuje").foregroundStyle(.secondary)
+                    Text(String(localized: "settings.numberShows", bundle: .module)).foregroundStyle(.secondary)
                     Picker("", selection: $showUsedPercent) {
-                        Text("Zbývající").tag(false)
-                        Text("Vyčerpané").tag(true)
+                        Text(String(localized: "settings.remaining", bundle: .module)).tag(false)
+                        Text(String(localized: "settings.used", bundle: .module)).tag(true)
                     }.labelsHidden().pickerStyle(.segmented).frame(width: 180)
                     Spacer()
                 }
@@ -51,22 +51,22 @@ struct SettingsView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Upozornění").font(.headline)
-                Toggle("Upozornit, když klesnou zbývající limity", isOn: $notifsEnabled)
+                Text(String(localized: "settings.alerts", bundle: .module)).font(.headline)
+                Toggle(String(localized: "settings.alertToggle", bundle: .module), isOn: $notifsEnabled)
                     .onChange(of: notifsEnabled) { _, isOn in
                         if isOn { onRequestNotificationPermission() }
                     }
                 HStack {
-                    Text("Práh (zbývá ≤)").foregroundStyle(.secondary)
+                    Text(String(localized: "settings.threshold", bundle: .module)).foregroundStyle(.secondary)
                     Picker("", selection: $threshold) {
-                        ForEach([5, 10, 15, 20], id: \.self) { Text("\($0) %").tag($0) }
+                        ForEach([5, 10, 15, 20], id: \.self) { Text(String(format: NSLocalizedString("settings.percent", bundle: .module, comment: ""), $0)).tag($0) }
                     }.labelsHidden().frame(width: 80)
                     Spacer()
                 }
             }
 
             Spacer()
-            HStack { Spacer(); Text("StatusBar \(verze)").font(.caption2).foregroundStyle(.tertiary) }
+            HStack { Spacer(); Text(String(format: NSLocalizedString("settings.version", bundle: .module, comment: ""), verze)).font(.caption2).foregroundStyle(.tertiary) }
         }
         .padding(20)
         .frame(width: 360, height: 360)

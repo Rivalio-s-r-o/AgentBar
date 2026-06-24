@@ -1,1 +1,43 @@
 "test.ping" = "app-pong-cs";
+
+"popover.title" = "Spotřeba";
+"popover.todaytotal" = "Dnes ≈ %@";
+"popover.loading" = "Načítám…";
+"popover.link.anthropic" = "Stav Anthropic";
+"popover.link.openai" = "Stav OpenAI";
+"popover.link.usageClaude" = "Usage Claude";
+"popover.link.usageOpenai" = "Usage OpenAI";
+"popover.settings" = "Nastavení…";
+"popover.quit" = "Konec";
+"popover.updated" = "Aktualizováno %@";
+"popover.today" = "Dnes";
+"popover.today.detail" = "%@ tok (+%@ cache) ≈ %@";
+"popover.remaining" = "%lld%% zbývá";
+"popover.pace" = "Tempo: %@";
+"popover.month" = "30 dní";
+"popover.month.detail" = "%@ tok ≈ %@";
+"popover.computing" = "30 dní: počítám…";
+
+"settings.title" = "Nastavení";
+"settings.launch" = "Spouštět při přihlášení";
+"settings.bar" = "Zobrazení lišty";
+"settings.style" = "Styl";
+"settings.numberShows" = "Číslo ukazuje";
+"settings.remaining" = "Zbývající";
+"settings.used" = "Vyčerpané";
+"settings.alerts" = "Upozornění";
+"settings.alertToggle" = "Upozornit, když klesnou zbývající limity";
+"settings.threshold" = "Práh (zbývá ≤)";
+"settings.percent" = "%lld %%";
+"settings.version" = "StatusBar %@";
+
+"notif.title" = "%@ — %@";
+"notif.body" = "Zbývá %lld%%";
+"notif.body.reset" = " · reset za %@";
+
+"menubar.fallback" = "StatusBar";
+"menubar.tooltip.ok" = "%@: %lld%% zbývá";
+"menubar.tooltip.degraded" = "%@: ⚠︎ %@";
+"menubar.tooltip.unavailable" = "%@: — %@";
+
+"window.settings.title" = "StatusBar — Nastavení";

@@ -21,16 +21,16 @@ struct PopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Spotřeba").font(.headline)
+                Text(String(localized: "popover.title", bundle: .module)).font(.headline)
                 Spacer()
                 if dnesCelkem > 0 {
-                    Text("Dnes ≈ \(TokenFormatter.money(dnesCelkem))").font(.caption).foregroundStyle(.secondary)
+                    Text(String(format: NSLocalizedString("popover.todaytotal", bundle: .module, comment: ""), TokenFormatter.money(dnesCelkem))).font(.caption).foregroundStyle(.secondary)
                 }
                 Button(action: onRefresh) { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
             }.padding(.horizontal, 14).padding(.vertical, 10)
             Divider()
             if store.orderedUsages.isEmpty {
-                Text("Načítám…").foregroundStyle(.secondary).padding(14)
+                Text(String(localized: "popover.loading", bundle: .module)).foregroundStyle(.secondary).padding(14)
             } else {
                 ForEach(store.orderedUsages, id: \.providerId) {
                     ProviderCard(usage: $0,
@@ -41,15 +41,15 @@ struct PopoverView: View {
             }
             if store.orderedUsages.isEmpty { Divider() }   // jediný oddělovač před odkazy; jinak ho dává ForEach za poslední kartou
             VStack(alignment: .leading, spacing: 6) {
-                linkButton("Stav Anthropic", "https://status.anthropic.com")
-                linkButton("Stav OpenAI", "https://status.openai.com")
-                linkButton("Usage Claude", "https://claude.ai/settings/usage")
-                linkButton("Usage OpenAI", "https://platform.openai.com/usage")
+                linkButton(String(localized: "popover.link.anthropic", bundle: .module), "https://status.anthropic.com")
+                linkButton(String(localized: "popover.link.openai", bundle: .module), "https://status.openai.com")
+                linkButton(String(localized: "popover.link.usageClaude", bundle: .module), "https://claude.ai/settings/usage")
+                linkButton(String(localized: "popover.link.usageOpenai", bundle: .module), "https://platform.openai.com/usage")
             }.padding(.horizontal, 14).padding(.vertical, 8)
             HStack {
-                Button("Nastavení…", action: onOpenSettings).buttonStyle(.borderless).font(.caption)
+                Button(String(localized: "popover.settings", bundle: .module), action: onOpenSettings).buttonStyle(.borderless).font(.caption)
                 Spacer()
-                Button("Konec", action: onQuit).buttonStyle(.borderless).font(.caption)
+                Button(String(localized: "popover.quit", bundle: .module), action: onQuit).buttonStyle(.borderless).font(.caption)
             }.padding(.horizontal, 14).padding(.vertical, 8)
         }.frame(width: 320)
     }
@@ -67,7 +67,7 @@ private struct ProviderCard: View {
                 Spacer()
                 if let p = usage.planLabel { Text(p).font(.caption).foregroundStyle(.secondary) }
             }
-            Text("Aktualizováno \(RelativeTimeFormatter.string(from: usage.lastUpdated, now: Date()))")
+            Text(String(format: NSLocalizedString("popover.updated", bundle: .module, comment: ""), RelativeTimeFormatter.string(from: usage.lastUpdated, now: Date())))
                 .font(.caption2).foregroundStyle(.tertiary)
             switch usage.status {
             case .unavailable(let m): Text(m).font(.caption).foregroundStyle(.secondary)
@@ -80,14 +80,14 @@ private struct ProviderCard: View {
     @ViewBuilder private var monthRow: some View {
         if let p = period {
             HStack {
-                Text("30 dní").font(.caption2).foregroundStyle(.secondary)
+                Text(String(localized: "popover.month", bundle: .module)).font(.caption2).foregroundStyle(.secondary)
                 Spacer()
-                Text("\(TokenFormatter.compact(p.tokens.realTokens)) tok ≈ \(TokenFormatter.money(p.cost))")
+                Text(String(format: NSLocalizedString("popover.month.detail", bundle: .module, comment: ""), TokenFormatter.compact(p.tokens.realTokens), TokenFormatter.money(p.cost)))
                     .font(.caption).fontWeight(.medium)
             }
             // CP2 F5: ŽÁDNÝ /měs projekční řádek — jen trailing 30denní číslo.
         } else if isComputingPeriod {
-            Text("30 dní: počítám…").font(.caption2).foregroundStyle(.tertiary)
+            Text(String(localized: "popover.computing", bundle: .module)).font(.caption2).foregroundStyle(.tertiary)
         }
     }
 
@@ -95,9 +95,9 @@ private struct ProviderCard: View {
         if let today = usage.today {
             Divider().padding(.vertical, 2)
             HStack {
-                Text("Dnes").font(.caption2).foregroundStyle(.secondary)
+                Text(String(localized: "popover.today", bundle: .module)).font(.caption2).foregroundStyle(.secondary)
                 Spacer()
-                Text("\(TokenFormatter.compact(today.total.realTokens)) tok (+\(TokenFormatter.compact(today.total.cacheTokens)) cache) ≈ \(TokenFormatter.money(today.estimatedCost))")
+                Text(String(format: NSLocalizedString("popover.today.detail", bundle: .module, comment: ""), TokenFormatter.compact(today.total.realTokens), TokenFormatter.compact(today.total.cacheTokens), TokenFormatter.money(today.estimatedCost)))
                     .font(.caption).fontWeight(.medium)
             }
             if usage.providerId == .claudeCode, today.perModel.count > 1 {
@@ -113,13 +113,13 @@ private struct ProviderCard: View {
                 HStack {
                     Text(WindowLabel.text(for: w.kind)).font(.caption).foregroundStyle(.secondary); Spacer()
                     // ZBÝVAJÍCÍ %, ne vyčerpáno
-                    Text("\(max(0, 100 - Int((w.usedFraction*100).rounded())))% zbývá").font(.caption).fontWeight(.semibold)
+                    Text(String(format: NSLocalizedString("popover.remaining", bundle: .module, comment: ""), max(0, 100 - Int((w.usedFraction*100).rounded())))).font(.caption).fontWeight(.semibold)
                     if let r = w.resetAt { Text("· \(ResetFormatter.short(until: r, now: Date()))").font(.caption2).foregroundStyle(.secondary) }
                 }
                 // Fuel-gauge: bar = kolik zbývá; barva podle nebezpečí (málo zbývá → červená)
                 ProgressView(value: max(0.0, min(1.0, 1 - w.usedFraction))).tint(UsageColor.color(forFraction: w.usedFraction))
                 if let d = PaceCalculator.pace(window: w, now: Date()) {
-                    Text("Tempo: \(PaceLabel.text(deltaPercent: d))").font(.caption2).foregroundStyle(.tertiary)
+                    Text(String(format: NSLocalizedString("popover.pace", bundle: .module, comment: ""), PaceLabel.text(deltaPercent: d))).font(.caption2).foregroundStyle(.tertiary)
                 }
             }
         }

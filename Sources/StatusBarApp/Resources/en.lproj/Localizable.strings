@@ -1,1 +1,43 @@
 "test.ping" = "app-pong-en";
+
+"popover.title" = "Usage";
+"popover.todaytotal" = "Today ≈ %@";
+"popover.loading" = "Loading…";
+"popover.link.anthropic" = "Anthropic Status";
+"popover.link.openai" = "OpenAI Status";
+"popover.link.usageClaude" = "Claude Usage";
+"popover.link.usageOpenai" = "OpenAI Usage";
+"popover.settings" = "Settings…";
+"popover.quit" = "Quit";
+"popover.updated" = "Updated %@";
+"popover.today" = "Today";
+"popover.today.detail" = "%@ tok (+%@ cache) ≈ %@";
+"popover.remaining" = "%lld%% left";
+"popover.pace" = "Pace: %@";
+"popover.month" = "30 days";
+"popover.month.detail" = "%@ tok ≈ %@";
+"popover.computing" = "30 days: computing…";
+
+"settings.title" = "Settings";
+"settings.launch" = "Launch at login";
+"settings.bar" = "Menu bar display";
+"settings.style" = "Style";
+"settings.numberShows" = "Number shows";
+"settings.remaining" = "Remaining";
+"settings.used" = "Used";
+"settings.alerts" = "Alerts";
+"settings.alertToggle" = "Alert when remaining limits drop";
+"settings.threshold" = "Threshold (left ≤)";
+"settings.percent" = "%lld %%";
+"settings.version" = "StatusBar %@";
+
+"notif.title" = "%@ — %@";
+"notif.body" = "%lld%% left";
+"notif.body.reset" = " · resets in %@";
+
+"menubar.fallback" = "StatusBar";
+"menubar.tooltip.ok" = "%@: %lld%% left";
+"menubar.tooltip.degraded" = "%@: ⚠︎ %@";
+"menubar.tooltip.unavailable" = "%@: — %@";
+
+"window.settings.title" = "StatusBar — Settings";

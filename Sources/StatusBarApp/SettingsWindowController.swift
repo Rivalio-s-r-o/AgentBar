@@ -19,7 +19,7 @@ final class SettingsWindowController {
                 contentRect: NSRect(x: 0, y: 0, width: 360, height: 360),
                 styleMask: [.titled, .closable],
                 backing: .buffered, defer: false)
-            w.title = "StatusBar — Nastavení"
+            w.title = String(localized: "window.settings.title", bundle: .module)
             w.isReleasedWhenClosed = false
             w.contentViewController = NSHostingController(
                 rootView: SettingsView(onRequestNotificationPermission: onRequestNotificationPermission,

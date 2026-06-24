@@ -20,9 +20,9 @@ final class NotificationService {
         guard Bundle.main.bundleIdentifier != nil, !events.isEmpty else { return }
         for e in events {
             let content = UNMutableNotificationContent()
-            content.title = "\(e.providerDisplayName) — \(e.windowLabel)"
-            var body = "Zbývá \(e.remainingPercent) %"
-            if let r = e.resetAt { body += " · reset za \(ResetFormatter.short(until: r, now: Date()))" }
+            content.title = String(format: NSLocalizedString("notif.title", bundle: .module, comment: ""), e.providerDisplayName, e.windowLabel)
+            var body = String(format: NSLocalizedString("notif.body", bundle: .module, comment: ""), e.remainingPercent)
+            if let r = e.resetAt { body += String(format: NSLocalizedString("notif.body.reset", bundle: .module, comment: ""), ResetFormatter.short(until: r, now: Date())) }
             content.body = body
             content.sound = .default
             let id = "\(e.providerDisplayName)|\(e.windowLabel)"   // stabilní per okno → re-fire nahrazuje
