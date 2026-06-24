@@ -26,3 +26,30 @@ private func freshDefaults() -> (UserDefaults, String) {
     #expect(reread.notificationsEnabled == true)
     #expect(reread.remainingThresholdPercent == 15)
 }
+
+@Test func defaultStyluAVýznamu() {
+    let (ud, suite) = freshDefaults()
+    defer { ud.removePersistentDomain(forName: suite) }
+    let store = PreferencesStore(defaults: ud)
+    #expect(store.barStyle == .dotPercent)
+    #expect(store.showUsedPercent == false)
+}
+
+@Test func uloženíStyluAVýznamu() {
+    let (ud, suite) = freshDefaults()
+    defer { ud.removePersistentDomain(forName: suite) }
+    let store = PreferencesStore(defaults: ud)
+    store.barStyle = .worst
+    store.showUsedPercent = true
+    let reread = PreferencesStore(defaults: ud)
+    #expect(reread.barStyle == .worst)
+    #expect(reread.showUsedPercent == true)
+}
+
+@Test func neznámýStylFallbackNaA() {
+    let (ud, suite) = freshDefaults()
+    defer { ud.removePersistentDomain(forName: suite) }
+    ud.set("nesmysl-z-budoucnosti", forKey: PreferenceKeys.barStyle)
+    let store = PreferencesStore(defaults: ud)
+    #expect(store.barStyle == .dotPercent)
+}
