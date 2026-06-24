@@ -21,6 +21,48 @@
 
 ---
 
+## Plan-forge hardening (AUDIT 2026-06-24, depth standard)
+
+> Executor: subagent-driven-development (implementer Sonnet + reviewer Sonnet/Opus per task). 0 CRIT/HIGH. Paralelizace empiricky ověřena PŘED tímto hardeningem.
+
+### Assumptions
+| # | Předpoklad | Stav | Jak ověřeno |
+|---|------------|------|-------------|
+| A1 | `concurrentPerform` + `@unchecked Sendable` akumulátor + `NSLock` projde Swift 6 strict (kompilace) | **verified** | forge: dočasná paralelizace → `swift build` Build complete (jen 1 warning, viz A2) |
+| A2 | Zachycení `var urls` v `concurrentPerform` je čisté | **FALSE → F1** | forge build: warning `#SendableClosureCaptures` na ClaudeTokenScanner; Codex (`let urls`) bez warningu → fix `let urls` |
+| A3 | Paralelní výsledek == sekvenční (korektnost merge) | **verified** | forge stress test (20 souborů → přesně 3000 tok) PASS |
+| A4 | Reálné zrychlení 12 s → cíl ~2-3 s | **verified** | forge: živá ~/.claude data 30d → **3,67 s** (~3,3×); 113M tok, 5 modelů |
+| A5 | Default `BarWindowSource.auto` → `usedPercent(.auto) == nearestLimitPercent` = nulová regrese lišty | **verified (logika)** | `segments(source: .auto)` volá `usedPercent(.auto)` = `nearestLimitPercent`; existující `segments`/`MenuBarStyle` testy beze změny |
+| A6 | `BarWindowSource: String` funguje s `@AppStorage` (jako `MenuBarStyle`) | **verified** | stejný vzor ověřen v0.7a (`@AppStorage<MenuBarStyle>` kompiluje nativně) |
+| A7 | SF Symbols `chart.line.uptrend.xyaxis`, `waveform.path.ecg` existují (macOS 14) | **accepted** | standardní SF Symbols (macOS 13+); fallback: jiný symbol, vizuál ověří uživatel |
+| A8 | `bundle: Bundle? = nil` + `%/%%` pravidlo + `Bundle.module` internal | **verified (v0.9c)** | převzato z ověřené v0.9c lokalizace |
+
+### Guardrails
+- **Zakázáno:** měnit auth/credential/network/refresh kód; logovat surový obsah konverzací; psát do `~/.claude`/`~/.codex`; spouštět GUI `.app`; push bez explicitního souhlasu.
+- **⚠ Nevratné:** žádné (lokální kód + testy, vše `git`-revertovatelné).
+- **Globální stop podmínky:** (1) `swift build` Swift 6 concurrency ERROR (ne warning) v paralelizaci → ZASTAV (A1 to vylučuje, F1 řeší warning). (2) Po tasku `swift test` červené a nejde opravit dle „On failure" → ZASTAV. (3) Po Task 1 reálný sken NEzrychlí (> 8 s) → ZASTAV a nahlas (A4 to vylučuje).
+- **Kill criteria:** pokud po 2 re-implementačních smyčkách kteréhokoli tasku `swift test` neprochází, nebo paralelizace nejde Swift-6-čistě bez warningu → větev se odloží, perf (Task 1) se vrátí do forge, UX tasky (2–6) mohou jít samostatně. Přezkum: nedojde-li exekuce do konce této session, stav v ledgeru → pokračovat příště.
+
+### Risk Register
+| ID | Sev | Lik | Riziko | Mitigace (krok) | Resolution |
+|----|-----|-----|--------|------------------|------------|
+| F1 | MED | H | `var urls` zachycený → Swift 6 warning | `let urls = collected` (Task 1 Step 3) | fixed-in-Task1 |
+| F2 | MED | M | `.weekly` ukáže scoped % místo celkového | preferovat `weekly(nil)` (Task 3 Step 4 + test) | fixed-in-Task3 (CP2) |
+| F3 | LOW | L | Nejednoznačné umístění akumulátoru/metody | předepsáno přesně (Task 1/3) | fixed |
+| F4 | LOW | L | Task 5 Step 2 part-replace bez kotev | zpřesněny kotvy | fixed |
+| R2 | LOW | L | `.session/.weekly` skryje kritické druhé okno | `.auto` default hlídá nejhorší | accepted |
+
+### Audit Trail
+- **Lenses:** 1 (failure) → F1; 2 (security) → N/A (read-only paralelní sken čísel + UI, žádné credentials/síť/destrukce); 3 (assumptions) → A1–A8 (A2 odhalil F1); 4 (deps) → ordering Task2→3→5 OK, žádný konflikt; 5 (alternatives) → akumulátor vs unsafe-buffer vs TaskGroup (akumulátor verified clean+fast); 6 (executor) → F3/F4; 7 (goal) → F2 (Weekly sémantika).
+- **Findings:** 4 (2 MED, 2 LOW) → 4 fixed; 0 CRIT/HIGH. F1 empiricky odhalen.
+- **Re-audit (R*):** po hardeningu bez nových defektů (let urls čisté, weekly_all preferuje, kotvy zpřesněny).
+- **Tabletop dry run:** PASSED — Task1(parallel)→2(window klíče)→3(BarWindowSource reusuje window.session/weekly + usedPercent prefer weekly_all + segments source)→4(App odkazy)→5(picker reusuje BarWindowSource + source wiring + 0.9.1)→6(úplnost+grep). Identifikátory konzistentní; žádný krok nezávisí na pozdějším.
+- **Klíčové změny vs draft v0:** F1→`let urls`; F2→`usedPercent(.weekly)` preferuje weekly_all + test; F3/F4→přesné kotvy.
+- **Rozhodnutí uživatele (CP2):** F2 celkové týdenní okno; fix scope vše (F1–F4).
+- **Sledovat při exekuci:** Task 1 reálné zrychlení (uživatel ověří svižnost popoveru); vizuál per-provider odkazů + picker okna.
+
+---
+
 ### Task 1: Kit — paralelizace 30denního skenu
 
 **Files:**
@@ -73,14 +115,16 @@ Nahraď tělo `rangeUsage` (ponech `todayUsage` beze změny) v `Sources/StatusBa
 ```swift
     public func rangeUsage(start: Date, end: Date) -> TodayUsage? {
         // 1) Posbírej URL souborů v rozsahu (mtime ≥ start) — sekvenčně (enumerator je levný).
-        var urls: [URL] = []
+        // F1: výsledek MUSÍ být `let` (ne `var`) — `var` zachycený v concurrentPerform = Swift 6 warning #SendableClosureCaptures.
+        var collected: [URL] = []
         if let en = FileManager.default.enumerator(at: projectsDir,
             includingPropertiesForKeys: [.contentModificationDateKey]) {
             for case let url as URL in en where url.pathExtension == "jsonl" {
                 if let mod = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
-                   mod >= start { urls.append(url) }
+                   mod >= start { collected.append(url) }
             }
         }
+        let urls = collected
         guard !urls.isEmpty else { return nil }
 
         // 2) Parsuj soubory PARALELNĚ; merge přes thread-safe akumulátor (Swift 6 čistý).
@@ -101,7 +145,7 @@ Nahraď tělo `rangeUsage` (ponech `todayUsage` beze změny) v `Sources/StatusBa
     }
 ```
 
-Přidej do TÉHOŽ souboru (nad `public struct ClaudeTokenScanner` nebo pod něj) sdílený akumulátor:
+Přidej na konec souboru (POD uzavírací `}` struct `ClaudeTokenScanner`, jako top-level deklarace) sdílený akumulátor:
 
 ```swift
 /// Thread-safe merge per-model tokenů z paralelního skenu (Swift 6: @unchecked Sendable + NSLock).
@@ -147,7 +191,7 @@ Nahraď tělo `rangeUsage` (ponech `todayUsage`) v `Sources/StatusBarKit/Provide
     }
 ```
 
-Přidej do TÉHOŽ souboru:
+Přidej na konec souboru (POD uzavírací `}` struct `CodexTokenScanner`, top-level):
 
 ```swift
 /// Thread-safe součet TokenUsage z paralelního skenu.
@@ -295,6 +339,18 @@ private func usage(session: Double?, weekly: Double?) -> ProviderUsage {
     #expect(jenWeekly.usedPercent(for: .session) == 55)   // chybí session → nearest (55)
 }
 
+@Test func usedPercentWeeklyPreferujeCelkové() {
+    // F2: weekly_all (scope nil) = 40 %, scoped „Sonnet" = 90 % → .weekly bere CELKOVÉ (40), ne scoped
+    let u = ProviderUsage(providerId: .claudeCode, displayName: "Claude Code", planLabel: nil,
+        windows: [
+            UsageWindow(kind: .rolling5h, usedFraction: 0.10, resetAt: nil),
+            UsageWindow(kind: .weekly(scope: nil), usedFraction: 0.40, resetAt: nil),
+            UsageWindow(kind: .weekly(scope: "Sonnet"), usedFraction: 0.90, resetAt: nil),
+        ], status: .ok, lastUpdated: Date())
+    #expect(u.usedPercent(for: .weekly) == 40)            // celkové týdenní, ne scoped 90
+    #expect(u.usedPercent(for: .auto) == 90)              // auto = nearest = nejhorší (90)
+}
+
 @Test func segmentsSourceVybíráČísloIBarvu() {
     let u = usage(session: 0.05, weekly: 0.95)             // session bezpečné, weekly kritické
     let sSession = MenuBarTitleBuilder.segments(for: [u], style: .dotPercent, showUsedPercent: true, source: .session)
@@ -354,7 +410,7 @@ public enum BarWindowSource: String, Sendable, Hashable, CaseIterable {
 
 - [ ] **Step 4: `ProviderUsage.usedPercent(for:)`**
 
-V `Sources/StatusBarKit/Models/ProviderUsage.swift` přidej do `extension`/struct `ProviderUsage` (za `nearestLimitPercent`):
+V `Sources/StatusBarKit/Models/ProviderUsage.swift` přidej do `struct ProviderUsage` jako další metodu, ZA computed `var nearestLimitPercent` (řádek `public var nearestLimitPercent: Int { ... }`):
 
 ```swift
     /// Used % okna zvoleného lištou. Chybí-li dané okno, fallback na nejhorší (nearestLimitPercent).
@@ -368,6 +424,11 @@ V `Sources/StatusBarKit/Models/ProviderUsage.swift` přidej do `extension`/struc
             }
             return nearestLimitPercent
         case .weekly:
+            // F2: preferuj CELKOVÉ týdenní okno (weekly_all, scope == nil) — to je „Weekly" na fotce.
+            if let allWeekly = windows.first(where: { if case .weekly(let s) = $0.kind { return s == nil }; return false }) {
+                return Int((allWeekly.usedFraction * 100).rounded())
+            }
+            // jinak nejhorší týdenní (scoped), jinak nearest
             let weeklies = windows.filter { if case .weekly = $0.kind { return true }; return false }
             if let w = weeklies.max(by: { $0.usedFraction < $1.usedFraction }) {
                 return Int((w.usedFraction * 100).rounded())
@@ -535,7 +596,7 @@ cs.lproj: ODSTRAŇ tytéž `popover.link.*`; přidej:
 - [ ] **Step 4: Build + smoke**
 
 Run: `swift build 2>&1 | grep -i warning; swift test`
-Expected: žádné warningy; 135/135 (Kit testy beze změny App).
+Expected: žádné warningy; 136/136 (Kit testy beze změny App).
 
 - [ ] **Step 5: Commit**
 
@@ -574,7 +635,7 @@ V `Sources/StatusBarApp/SettingsView.swift` přidej `@AppStorage` (k ostatním):
     @AppStorage(PreferenceKeys.barWindowSource) private var barWindowSource: BarWindowSource = .auto
 ```
 
-Zabal launch-at-login do sekce „Obecné" (přidej hlavičku) a do sekce „Lišta" přidej picker okna. Nahraď `body` VStack obsah (od `Text(settings.title)` po sekci Upozornění) takto — Obecné hlavička + Lišta s 3 ovladači:
+Zabal launch-at-login do sekce „Obecné" (přidej hlavičku) a do sekce „Lišta" přidej picker okna. V `body` nahraď SOUVISLÝ blok začínající řádkem `Text(String(localized: "settings.title", bundle: .module))...` a končící `Divider()`, který je TĚSNĚ PŘED `VStack` se sekcí `settings.alerts` (tento `Divider()` VČETNĚ), následujícím blokem. Sekce „Upozornění" (`settings.alerts` VStack) i patička s verzí ZŮSTÁVAJÍ beze změny POD vloženým blokem:
 
 ```swift
             Text(String(localized: "settings.title", bundle: .module)).font(.title3).fontWeight(.semibold)
@@ -644,7 +705,7 @@ V `Resources/Info.plist` změň `CFBundleShortVersionString` a `CFBundleVersion`
 - [ ] **Step 5: Build + smoke**
 
 Run: `swift build 2>&1 | grep -i warning; swift test`
-Expected: žádné warningy; 135/135.
+Expected: žádné warningy; 136/136.
 
 Run: `bash scripts/make-app.sh`
 Expected: `.app` 0.9.1 vytvořen (NESPOUŠTĚT GUI).
@@ -699,7 +760,7 @@ Expected: každý zásah je v KOMENTÁŘI nebo v `.strings`/`L10n` klíči (NE n
 - [ ] **Step 5: Finální smoke + commit (pokud byly opravy)**
 
 Run: `swift build && swift test`
-Expected: vše zelené (cílově ~135 testů).
+Expected: vše zelené (cílově ~136 testů).
 
 ```bash
 git add -A
