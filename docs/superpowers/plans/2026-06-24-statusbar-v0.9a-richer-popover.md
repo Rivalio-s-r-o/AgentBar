@@ -488,4 +488,10 @@ Aditivní (nové Kit typy + fetchedAt threading + UI). Rollback = `git revert`/`
 | R3 | LOW | L | URL dashboardů se změní | degradace neškodná | accepted |
 | R4 | LOW | L | pace u 5h volatilní | caption2, drobné; nil když resetAt v minulosti | accepted |
 
-## Audit Trail (doplní plan-forge)
+## Audit Trail
+- **Lenses applied:** 1 red-team, 2 security (N/A — jen veřejné status/usage URL, žádné secrets), 3 assumptions, 4 dependencies, 5 alternatives, 6 cheap-executor, 7 goal-fit.
+- **Empirická verifikace (klíčová):** 10 Task 1 asercí (4 rel. čas + 6 pace) dočasně přidáno (+ temp impl) a spuštěno `swift test` → **10/10 PASS** (pace −20/+20/0, hranice, nil-cesty ověřeny). Scratch revertnut, baseline zpět 109.
+- **Alternativy (lens 5):** `fetchedAt` přes wrapper `CodexLiveUsage` *(zvoleno — `CodexSnapshot` zůstane čistý parser typ)*; vs. přidat fetchedAt do `CodexSnapshot` (rozbije parser testy); vs. akceptovat nepřesný `lastUpdated=now` (lhalo by po throttle).
+- **Findings:** 0 CRIT, 0 HIGH, 0 MED, 2 LOW (accepted): „Aktualizováno" u `.unavailable` ukáže „právě teď" (honest — naposled zkoušeno teď); relativní čas se v otevřeném popoveru živě neaktualizuje (popover transientní, refresh při otevření).
+- **Re-audit/dry run:** PASSED — build zelený po každém tasku (T1 nový Kit unused; T2 `CodexUsageSource` návrat = hard změna, ale live source+collector+test atomicky v T2; T3 UI). Identifikátory (`RelativeTimeFormatter.string`, `PaceCalculator.pace`, `PaceLabel.text`, `ClaudeLiveUsage.fetchedAt`, `CodexLiveUsage{snapshot,fetchedAt}`) konzistentní.
+- **Rozhodnutí:** spuštěno s defaulty dle delegace („prožeň"); 0 nálezů k rozhodnutí; kill criterion v Guardrails.
