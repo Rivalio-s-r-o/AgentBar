@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import StatusBarKit
 
 struct PopoverView: View {
@@ -9,6 +10,11 @@ struct PopoverView: View {
 
     private var dnesCelkem: Decimal {
         store.orderedUsages.compactMap { $0.today?.estimatedCost }.reduce(Decimal(0), +)
+    }
+
+    private func linkButton(_ title: String, _ urlString: String) -> some View {
+        Button(title) { if let u = URL(string: urlString) { NSWorkspace.shared.open(u) } }
+            .buttonStyle(.borderless).font(.caption)
     }
 
     var body: some View {
@@ -28,6 +34,13 @@ struct PopoverView: View {
                 ForEach(store.orderedUsages, id: \.providerId) { ProviderCard(usage: $0); Divider() }
             }
             if store.orderedUsages.isEmpty { Divider() }   // jinak už divider dává ForEach za poslední kartou
+            Divider()
+            VStack(alignment: .leading, spacing: 6) {
+                linkButton("Stav Anthropic", "https://status.anthropic.com")
+                linkButton("Stav OpenAI", "https://status.openai.com")
+                linkButton("Usage Claude", "https://claude.ai/settings/usage")
+                linkButton("Usage OpenAI", "https://platform.openai.com/usage")
+            }.padding(.horizontal, 14).padding(.vertical, 8)
             HStack {
                 Button("Nastavení…", action: onOpenSettings).buttonStyle(.borderless).font(.caption)
                 Spacer()
@@ -44,9 +57,11 @@ private struct ProviderCard: View {
             HStack {
                 Circle().fill(usage.providerId == .claudeCode ? Color(red:0.85,green:0.46,blue:0.34) : Color(red:0.06,green:0.64,blue:0.50)).frame(width: 9, height: 9)
                 Text(usage.displayName).fontWeight(.semibold)
-                if let p = usage.planLabel { Text(p).font(.caption).foregroundStyle(.secondary) }
                 Spacer()
+                if let p = usage.planLabel { Text(p).font(.caption).foregroundStyle(.secondary) }
             }
+            Text("Aktualizováno \(RelativeTimeFormatter.string(from: usage.lastUpdated, now: Date()))")
+                .font(.caption2).foregroundStyle(.tertiary)
             switch usage.status {
             case .unavailable(let m): Text(m).font(.caption).foregroundStyle(.secondary)
             case .degraded(let m): Text(m).font(.caption2).foregroundStyle(.orange); windowsList; todayRow
@@ -82,6 +97,9 @@ private struct ProviderCard: View {
                 }
                 // Fuel-gauge: bar = kolik zbývá; barva podle nebezpečí (málo zbývá → červená)
                 ProgressView(value: max(0.0, min(1.0, 1 - w.usedFraction))).tint(UsageColor.color(forFraction: w.usedFraction))
+                if let d = PaceCalculator.pace(window: w, now: Date()) {
+                    Text("Tempo: \(PaceLabel.text(deltaPercent: d))").font(.caption2).foregroundStyle(.tertiary)
+                }
             }
         }
     }
