@@ -4,6 +4,7 @@ import StatusBarKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = UsageStore()
+    private let costHistory: CostHistoryStore
     private let prefs = PreferencesStore()
     private let notifier = NotificationService()
     private var lastAlerted: Set<AlertKey> = []
@@ -11,6 +12,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController!
     private var settings: SettingsWindowController!
     private var timer: Timer?
+
+    override init() {
+        let claudeScanner = ClaudeTokenScanner()
+        let codexScanner = CodexTokenScanner(maxFilesToScan: 1000)   // CP2 F1: backstop cap; mtime-rozsah už filtruje 30 dní
+        costHistory = CostHistoryStore(provider: { now in
+            let start = now.addingTimeInterval(-30 * 86400)
+            return await Task.detached(priority: .utility) {
+                var out: [ProviderID: PeriodCost] = [:]
+                if let c = claudeScanner.rangeUsage(start: start, end: now) {
+                    out[.claudeCode] = PeriodCost(tokens: c.total, cost: c.estimatedCost)
+                }
+                if let x = codexScanner.rangeUsage(start: start, end: now) {
+                    out[.codex] = PeriodCost(tokens: x.total, cost: x.estimatedCost)
+                }
+                return out
+            }.value
+        })
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         coordinator = RefreshCoordinator(store: store, providers: [
@@ -31,15 +51,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }, onAppearanceChanged: { [weak self] in
             self?.menuBar?.applyAppearance()
         })
-        menuBar = MenuBarController(store: store, prefs: prefs, onClick: { [weak self] in
-            Task { await self?.coordinator.refreshNow(includeToday: true) }   // popover/refresh → skenuj today
+        menuBar = MenuBarController(store: store, costHistory: costHistory, prefs: prefs, onClick: { [weak self] in
+            guard let self else { return }
+            Task { await self.coordinator.refreshNow(includeToday: true) }   // today (rychlé)
+            self.costHistory.refreshIfStale()                                 // 30 dní (throttle 6h, off-main)
         }, onOpenSettings: { [weak self] in
             self?.settings.show()
         })
-        Task { await coordinator.refreshNow(includeToday: false) }            // start: jen limity (rychle)
+        Task { await coordinator.refreshNow(includeToday: false) }            // start: jen limity
+        costHistory.refreshIfStale()                                          // start: nachystej 30denní data
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             guard let self else { return }
-            Task { await self.coordinator.refreshNow(includeToday: false) }   // background: jen limity
+            Task { await self.coordinator.refreshNow(includeToday: false) }   // 60s: jen limity — 30denní cenu NEVOLÁ
         }
     }
 }

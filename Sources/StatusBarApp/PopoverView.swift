@@ -4,6 +4,7 @@ import StatusBarKit
 
 struct PopoverView: View {
     @ObservedObject var store: UsageStore
+    @ObservedObject var costHistory: CostHistoryStore
     let onRefresh: () -> Void
     let onQuit: () -> Void
     var onOpenSettings: () -> Void = {}
@@ -31,7 +32,12 @@ struct PopoverView: View {
             if store.orderedUsages.isEmpty {
                 Text("Načítám…").foregroundStyle(.secondary).padding(14)
             } else {
-                ForEach(store.orderedUsages, id: \.providerId) { ProviderCard(usage: $0); Divider() }
+                ForEach(store.orderedUsages, id: \.providerId) {
+                    ProviderCard(usage: $0,
+                                 period: costHistory.history[$0.providerId],
+                                 isComputingPeriod: costHistory.isComputing)
+                    Divider()
+                }
             }
             if store.orderedUsages.isEmpty { Divider() }   // jediný oddělovač před odkazy; jinak ho dává ForEach za poslední kartou
             VStack(alignment: .leading, spacing: 6) {
@@ -51,6 +57,8 @@ struct PopoverView: View {
 
 private struct ProviderCard: View {
     let usage: ProviderUsage
+    var period: PeriodCost? = nil
+    var isComputingPeriod: Bool = false
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -63,10 +71,24 @@ private struct ProviderCard: View {
                 .font(.caption2).foregroundStyle(.tertiary)
             switch usage.status {
             case .unavailable(let m): Text(m).font(.caption).foregroundStyle(.secondary)
-            case .degraded(let m): Text(m).font(.caption2).foregroundStyle(.orange); windowsList; todayRow
-            case .ok: windowsList; todayRow
+            case .degraded(let m): Text(m).font(.caption2).foregroundStyle(.orange); windowsList; todayRow; monthRow
+            case .ok: windowsList; todayRow; monthRow
             }
         }.padding(.horizontal, 14).padding(.vertical, 11)
+    }
+
+    @ViewBuilder private var monthRow: some View {
+        if let p = period {
+            HStack {
+                Text("30 dní").font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(TokenFormatter.compact(p.tokens.realTokens)) tok ≈ \(TokenFormatter.money(p.cost))")
+                    .font(.caption).fontWeight(.medium)
+            }
+            // CP2 F5: ŽÁDNÝ /měs projekční řádek — jen trailing 30denní číslo.
+        } else if isComputingPeriod {
+            Text("30 dní: počítám…").font(.caption2).foregroundStyle(.tertiary)
+        }
     }
 
     @ViewBuilder private var todayRow: some View {

@@ -13,7 +13,7 @@ final class MenuBarController {
     private var cancellable: AnyCancellable?
 
     private let onOpenSettings: () -> Void
-    init(store: UsageStore, prefs: PreferencesStore, onClick: @escaping () -> Void,
+    init(store: UsageStore, costHistory: CostHistoryStore, prefs: PreferencesStore, onClick: @escaping () -> Void,
          onOpenSettings: @escaping () -> Void = {}) {
         self.store = store
         self.prefs = prefs
@@ -28,9 +28,9 @@ final class MenuBarController {
         }
         popover.behavior = .transient
         let hosting = NSHostingController(rootView:
-            PopoverView(store: store, onRefresh: onClick, onQuit: { NSApp.terminate(nil) },
+            PopoverView(store: store, costHistory: costHistory, onRefresh: onClick, onQuit: { NSApp.terminate(nil) },
                         onOpenSettings: onOpenSettings))
-        hosting.sizingOptions = .preferredContentSize   // popover se přizpůsobí výšce obsahu (nic se neořízne)
+        hosting.sizingOptions = .preferredContentSize
         popover.contentViewController = hosting
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
