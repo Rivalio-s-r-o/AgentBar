@@ -13,11 +13,6 @@ struct PopoverView: View {
         store.orderedUsages.compactMap { $0.today?.estimatedCost }.reduce(Decimal(0), +)
     }
 
-    private func linkButton(_ title: String, _ urlString: String) -> some View {
-        Button(title) { if let u = URL(string: urlString) { NSWorkspace.shared.open(u) } }
-            .buttonStyle(.borderless).font(.caption)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -39,13 +34,7 @@ struct PopoverView: View {
                     Divider()
                 }
             }
-            if store.orderedUsages.isEmpty { Divider() }   // jediný oddělovač před odkazy; jinak ho dává ForEach za poslední kartou
-            VStack(alignment: .leading, spacing: 6) {
-                linkButton(String(localized: "popover.link.anthropic", bundle: .module), "https://status.anthropic.com")
-                linkButton(String(localized: "popover.link.openai", bundle: .module), "https://status.openai.com")
-                linkButton(String(localized: "popover.link.usageClaude", bundle: .module), "https://claude.ai/settings/usage")
-                linkButton(String(localized: "popover.link.usageOpenai", bundle: .module), "https://platform.openai.com/usage")
-            }.padding(.horizontal, 14).padding(.vertical, 8)
+            if store.orderedUsages.isEmpty { Divider() }
             HStack {
                 Button(String(localized: "popover.settings", bundle: .module), action: onOpenSettings).buttonStyle(.borderless).font(.caption)
                 Spacer()
@@ -71,8 +60,8 @@ private struct ProviderCard: View {
                 .font(.caption2).foregroundStyle(.tertiary)
             switch usage.status {
             case .unavailable(let m): Text(m).font(.caption).foregroundStyle(.secondary)
-            case .degraded(let m): Text(m).font(.caption2).foregroundStyle(.orange); windowsList; todayRow; monthRow
-            case .ok: windowsList; todayRow; monthRow
+            case .degraded(let m): Text(m).font(.caption2).foregroundStyle(.orange); windowsList; todayRow; monthRow; linksRow
+            case .ok: windowsList; todayRow; monthRow; linksRow
             }
         }.padding(.horizontal, 14).padding(.vertical, 11)
     }
@@ -88,6 +77,25 @@ private struct ProviderCard: View {
             // CP2 F5: ŽÁDNÝ /měs projekční řádek — jen trailing 30denní číslo.
         } else if isComputingPeriod {
             Text(String(localized: "popover.computing", bundle: .module)).font(.caption2).foregroundStyle(.tertiary)
+        }
+    }
+
+    private var usageURL: String {
+        usage.providerId == .claudeCode ? "https://claude.ai/settings/usage" : "https://platform.openai.com/usage"
+    }
+    private var statusURL: String {
+        usage.providerId == .claudeCode ? "https://status.anthropic.com" : "https://status.openai.com"
+    }
+    private func linkButton(_ title: String, _ symbol: String, _ urlString: String) -> some View {
+        Button { if let u = URL(string: urlString) { NSWorkspace.shared.open(u) } } label: {
+            Label(title, systemImage: symbol)
+        }.buttonStyle(.borderless).font(.caption)
+    }
+    @ViewBuilder private var linksRow: some View {
+        HStack(spacing: 14) {
+            linkButton(String(localized: "card.usage", bundle: .module), "chart.line.uptrend.xyaxis", usageURL)
+            linkButton(String(localized: "card.status", bundle: .module), "waveform.path.ecg", statusURL)
+            Spacer()
         }
     }
 

@@ -3,10 +3,8 @@
 "popover.title" = "Usage";
 "popover.todaytotal" = "Today ≈ %@";
 "popover.loading" = "Loading…";
-"popover.link.anthropic" = "Anthropic Status";
-"popover.link.openai" = "OpenAI Status";
-"popover.link.usageClaude" = "Claude Usage";
-"popover.link.usageOpenai" = "OpenAI Usage";
+"card.usage" = "Usage";
+"card.status" = "Status";
 "popover.settings" = "Settings…";
 "popover.quit" = "Quit";
 "popover.updated" = "Updated %@";

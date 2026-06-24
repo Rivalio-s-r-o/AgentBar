@@ -3,10 +3,8 @@
 "popover.title" = "Spotřeba";
 "popover.todaytotal" = "Dnes ≈ %@";
 "popover.loading" = "Načítám…";
-"popover.link.anthropic" = "Stav Anthropic";
-"popover.link.openai" = "Stav OpenAI";
-"popover.link.usageClaude" = "Usage Claude";
-"popover.link.usageOpenai" = "Usage OpenAI";
+"card.usage" = "Usage";
+"card.status" = "Stav";
 "popover.settings" = "Nastavení…";
 "popover.quit" = "Konec";
 "popover.updated" = "Aktualizováno %@";
