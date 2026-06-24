@@ -84,3 +84,18 @@ private let cx = { usage(.codex, used: 0.92) }()
     #expect(MenuBarStyle.dotPercent.displayName == "Tečka + %")
     #expect(MenuBarStyle.worst.displayName == "Nejkritičtější")
 }
+
+@Test func stylCNedostupný() {
+    // dotOnly + .unavailable → tečka v barvě stavu .normal (nerozlišitelná od OK-normal, dle specu)
+    let down = usage(.claudeCode, used: 0, status: .unavailable("x"))
+    let s = MenuBarTitleBuilder.segments(for: [down], style: .dotOnly)
+    #expect(s[0] == MenuBarSegment(providerId: .claudeCode, leading: .levelDot, text: "", level: .normal))
+}
+
+@Test func stylDShodaVyhráváPrvní() {
+    // worst tie-break: při shodném vyčerpání vyhrává první v pořadí (Claude před Codexem)
+    let a = usage(.claudeCode, used: 0.50)
+    let b = usage(.codex, used: 0.50)
+    let s = MenuBarTitleBuilder.segments(for: [a, b], style: .worst, showUsedPercent: false)
+    #expect(s == [MenuBarSegment(providerId: .claudeCode, leading: .providerDot, text: "50%", level: .normal)])
+}

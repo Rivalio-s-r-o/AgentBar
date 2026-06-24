@@ -22,7 +22,7 @@ public struct MenuBarSegment: Sendable, Equatable {
 }
 
 public enum MenuBarTitleBuilder {
-    static func shortLabel(_ id: ProviderID) -> String {
+    private static func shortLabel(_ id: ProviderID) -> String {
         switch id { case .claudeCode: return "CC"; case .codex: return "CX" }
     }
 
