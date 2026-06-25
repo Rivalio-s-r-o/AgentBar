@@ -138,8 +138,7 @@ private struct ProviderCard: View {
                     Text(String(format: NSLocalizedString("popover.remaining", bundle: .module, comment: ""), max(0, 100 - Int((w.usedFraction*100).rounded())))).font(.caption).fontWeight(.semibold)
                     if let r = w.resetAt { Text("· \(ResetFormatter.short(until: r, now: Date()))").font(.caption2).foregroundStyle(.secondary) }
                 }
-                // Fuel-gauge: bar = kolik zbývá; barva podle nebezpečí (málo zbývá → červená)
-                ProgressView(value: max(0.0, min(1.0, 1 - w.usedFraction))).tint(UsageColor.color(forFraction: w.usedFraction))
+                BurnBarView(bar: BurnBarBuilder.bar(forWindow: w, now: Date()))
                 let paceText = PaceCalculator.pace(window: w, now: Date()).map { PaceLabel.text(deltaPercent: $0) }
                 let burn = BurnRateCalculator.project(window: w, now: Date())
                 let burnText = burn.map { BurnRateLabel.text($0) }
