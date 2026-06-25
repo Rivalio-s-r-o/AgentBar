@@ -42,17 +42,17 @@ enum BurnBarRenderer {
                     if bar.projected > bar.used {
                         let pr = NSRect(x: barRect.minX + barW*CGFloat(bar.used), y: barRect.minY,
                                         width: barW*CGFloat(bar.projected - bar.used), height: barH)
-                        (bar.overLimit ? NSColor.systemRed.withAlphaComponent(0.42) : hue(bar.level).withAlphaComponent(0.38)).setFill()
+                        (bar.overLimit ? NSColor.systemRed.withAlphaComponent(0.42) : hue(bar.projectedLevel).withAlphaComponent(0.38)).setFill()
                         NSBezierPath(rect: pr).fill()
                     }
                     let ur = NSRect(x: barRect.minX, y: barRect.minY, width: barW*CGFloat(min(1.0, bar.used)), height: barH)
-                    hue(bar.level).setFill(); NSBezierPath(rect: ur).fill()
+                    hue(bar.usedLevel).setFill(); NSBezierPath(rect: ur).fill()
                     if bar.overLimit {
                         let cap = NSRect(x: barRect.maxX - 3, y: barRect.minY, width: 3, height: barH)
                         NSColor.systemRed.setFill(); NSBezierPath(rect: cap).fill()
                     }
                     NSGraphicsContext.restoreGraphicsState()
-                    hue(bar.level).withAlphaComponent(0.55).setStroke()
+                    hue(bar.projectedLevel).withAlphaComponent(0.55).setStroke()
                     let border = NSBezierPath(roundedRect: barRect.insetBy(dx: 0.3, dy: 0.3), xRadius: barR, yRadius: barR)
                     border.lineWidth = 0.6; border.stroke()
                 } else {
