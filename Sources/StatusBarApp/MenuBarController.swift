@@ -105,8 +105,11 @@ final class MenuBarController {
                 return BurnBarRenderer.Group(dot: dotColor(u.providerId), bar: nil, percent: nil)
             }
             let bar = BurnBarBuilder.bar(for: u, source: prefs.barWindowSource, now: Date())
-            return BurnBarRenderer.Group(dot: dotColor(u.providerId), bar: bar,
-                                         percent: bar.map { Int(($0.used * 100).rounded()) })
+            let pct: Int? = bar.map { b in
+                let used = Int((b.used * 100).rounded())
+                return prefs.showUsedPercent ? used : max(0, 100 - used)
+            }
+            return BurnBarRenderer.Group(dot: dotColor(u.providerId), bar: bar, percent: pct)
         }
         if groups.isEmpty {
             statusItem.button?.image = nil

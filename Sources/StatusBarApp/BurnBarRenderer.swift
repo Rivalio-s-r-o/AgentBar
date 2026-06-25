@@ -14,7 +14,7 @@ enum BurnBarRenderer {
 
     static func image(groups: [Group]) -> NSImage {
         let H: CGFloat = 18, dotR: CGFloat = 3
-        let barW: CGFloat = 52, barH: CGFloat = 9, barR: CGFloat = 3
+        let barW: CGFloat = 35, barH: CGFloat = 9, barR: CGFloat = 3
         let gap1: CGFloat = 5, gap2: CGFloat = 4, groupGap: CGFloat = 12, pad: CGFloat = 2
         let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
 
