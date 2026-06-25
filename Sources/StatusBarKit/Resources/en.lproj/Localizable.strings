@@ -19,6 +19,7 @@
 "style.labelPercent" = "Label + %";
 "style.dotOnly" = "Dot only";
 "style.worst" = "Most critical";
+"style.burnBar" = "Burn bar";
 
 "collector.claude.missing" = "File %@ not found. Open Claude Code and run /usage.";
 "collector.claude.stale" = "Data %lld min old — open Claude Code.";

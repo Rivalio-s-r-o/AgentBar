@@ -47,7 +47,7 @@ public enum MenuBarTitleBuilder {
                                 showUsedPercent: Bool = false,
                                 source: BarWindowSource = .auto) -> [MenuBarSegment] {
         switch style {
-        case .dotPercent:
+        case .dotPercent, .burnBar:
             return usages.map { perProvider($0, label: false, showUsedPercent: showUsedPercent, source: source) }
         case .labelPercent:
             return usages.map { perProvider($0, label: true, showUsedPercent: showUsedPercent, source: source) }

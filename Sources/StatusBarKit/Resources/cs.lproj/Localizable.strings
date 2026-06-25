@@ -19,6 +19,7 @@
 "style.labelPercent" = "Štítek + %";
 "style.dotOnly" = "Jen tečka";
 "style.worst" = "Nejkritičtější";
+"style.burnBar" = "Burn pruh";
 
 "collector.claude.missing" = "Soubor %@ nenalezen. Otevři Claude Code a spusť /usage.";
 "collector.claude.stale" = "Data stará %lld min — otevři Claude Code.";
