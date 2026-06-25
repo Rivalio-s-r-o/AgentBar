@@ -61,6 +61,8 @@ final class MenuBarController {
         }
     }
     private func render(_ usages: [ProviderUsage]) {
+        if prefs.barStyle == .burnBar { renderBurnBar(usages); return }
+        statusItem.button?.image = nil   // jiný styl → zruš případný obrázek
         let segs = MenuBarTitleBuilder.segments(for: usages,
                                                 style: prefs.barStyle,
                                                 showUsedPercent: prefs.showUsedPercent,
@@ -84,12 +86,35 @@ final class MenuBarController {
         }
         if segs.isEmpty { title.append(NSAttributedString(string: NSLocalizedString("menubar.fallback", bundle: .module, comment: ""))) }
         statusItem.button?.attributedTitle = title
-        statusItem.button?.toolTip = usages.map { u -> String in
+        statusItem.button?.toolTip = toolTipText(usages)
+    }
+
+    private func toolTipText(_ usages: [ProviderUsage]) -> String {
+        usages.map { u -> String in
             switch u.status {
             case .ok: return String(format: NSLocalizedString("menubar.tooltip.ok", bundle: .module, comment: ""), u.displayName, max(0, 100 - u.nearestLimitPercent))
             case .degraded(let m): return String(format: NSLocalizedString("menubar.tooltip.degraded", bundle: .module, comment: ""), u.displayName, m)
             case .unavailable(let m): return String(format: NSLocalizedString("menubar.tooltip.unavailable", bundle: .module, comment: ""), u.displayName, m)
             }
         }.joined(separator: "\n")
+    }
+
+    private func renderBurnBar(_ usages: [ProviderUsage]) {
+        let groups: [BurnBarRenderer.Group] = usages.map { u in
+            if case .unavailable = u.status {
+                return BurnBarRenderer.Group(dot: dotColor(u.providerId), bar: nil, percent: nil)
+            }
+            let bar = BurnBarBuilder.bar(for: u, source: prefs.barWindowSource, now: Date())
+            return BurnBarRenderer.Group(dot: dotColor(u.providerId), bar: bar,
+                                         percent: bar.map { Int(($0.used * 100).rounded()) })
+        }
+        if groups.isEmpty {
+            statusItem.button?.image = nil
+            statusItem.button?.attributedTitle = NSAttributedString(string: NSLocalizedString("menubar.fallback", bundle: .module, comment: ""))
+        } else {
+            statusItem.button?.attributedTitle = NSAttributedString(string: "")
+            statusItem.button?.image = BurnBarRenderer.image(groups: groups)
+        }
+        statusItem.button?.toolTip = toolTipText(usages)
     }
 }
