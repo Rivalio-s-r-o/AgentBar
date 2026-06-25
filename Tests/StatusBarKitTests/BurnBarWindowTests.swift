@@ -9,7 +9,19 @@ import Foundation
     #expect(b.used == 0.5)
     #expect(b.projected == 1.0)   // proj 2.5 → clamp 1.0
     #expect(b.overLimit == true)
-    #expect(b.level == .critical)
+    #expect(b.projectedLevel == .critical)
+    #expect(b.usedLevel == .normal)
+}
+
+@Test func barForWindowOddeleneBarvy() {
+    let now = Date()
+    // Weekly: used 29 % (zelená), ale rychlé tempo → projekce přes limit (červená)
+    // 7d okno, uplynulo ~27 % (122h55m zbývá z 168h), used 0.29 → proj ~108 % overLimit
+    let w = UsageWindow(kind: .weekly(scope: nil), usedFraction: 0.29, resetAt: now.addingTimeInterval(122.92*3600))
+    let b = BurnBarBuilder.bar(forWindow: w, now: now)
+    #expect(b.usedLevel == .normal)        // teď 29 % = zelená
+    #expect(b.projectedLevel == .critical) // projekce přes limit = červená
+    #expect(b.overLimit == true)
 }
 
 @Test func barForWindowBezProjekce() {

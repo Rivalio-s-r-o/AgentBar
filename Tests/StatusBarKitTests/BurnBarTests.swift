@@ -16,7 +16,8 @@ private func usage(_ kind: WindowKind, used: Double, resetIn: TimeInterval, now:
     #expect(b.used == 0.5)
     #expect(b.projected == 1.0)        // clamp na 1.0
     #expect(b.overLimit == true)
-    #expect(b.level == .critical)
+    #expect(b.projectedLevel == .critical)
+    #expect(b.usedLevel == .normal)
 }
 
 @Test func burnBarMirnaProjekce() {
@@ -27,7 +28,8 @@ private func usage(_ kind: WindowKind, used: Double, resetIn: TimeInterval, now:
     #expect(b.used == 0.25)
     #expect(abs(b.projected - 0.5) < 0.001)
     #expect(b.overLimit == false)
-    #expect(b.level == .normal)
+    #expect(b.projectedLevel == .normal)
+    #expect(b.usedLevel == .normal)
 }
 
 @Test func burnBarBezProjekce() {
@@ -51,5 +53,6 @@ private func usage(_ kind: WindowKind, used: Double, resetIn: TimeInterval, now:
     let p = usage(.rolling5h, used: 1.2, resetIn: 3600, now: now)   // přes 100 %
     let b = BurnBarBuilder.bar(for: p, source: .auto, now: now)!
     #expect(b.used == 1.0)             // clamp
-    #expect(b.level == .critical)
+    #expect(b.projectedLevel == .critical)
+    #expect(b.usedLevel == .critical)
 }
