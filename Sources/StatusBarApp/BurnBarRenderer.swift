@@ -37,22 +37,19 @@ enum BurnBarRenderer {
                 let barRect = NSRect(x: x, y: midY - barH/2, width: barW, height: barH)
                 let track = NSBezierPath(roundedRect: barRect, xRadius: barR, yRadius: barR)
                 if let bar = g.bar {
+                    // Framing „ZBÝVÁ": vyplněná část = kolik zbývá. track = vyčerpáno (vpravo).
                     NSColor.labelColor.withAlphaComponent(0.14).setFill(); track.fill()
                     NSGraphicsContext.saveGraphicsState(); track.addClip()
-                    if bar.projected > bar.used {
-                        let pr = NSRect(x: barRect.minX + barW*CGFloat(bar.used), y: barRect.minY,
-                                        width: barW*CGFloat(bar.projected - bar.used), height: barH)
-                        (bar.overLimit ? NSColor.systemRed.withAlphaComponent(0.42) : hue(bar.projectedLevel).withAlphaComponent(0.38)).setFill()
-                        NSBezierPath(rect: pr).fill()
-                    }
-                    let ur = NSRect(x: barRect.minX, y: barRect.minY, width: barW*CGFloat(min(1.0, bar.used)), height: barH)
-                    hue(bar.usedLevel).setFill(); NSBezierPath(rect: ur).fill()
-                    if bar.overLimit {
-                        let cap = NSRect(x: barRect.maxX - 3, y: barRect.minY, width: 3, height: barH)
-                        NSColor.systemRed.setFill(); NSBezierPath(rect: cap).fill()
-                    }
+                    let safeW = CGFloat(max(0, 1 - bar.projected))        // bezpečně zbyde do resetu
+                    let burnW = CGFloat(max(0, bar.projected - bar.used))  // spálí se do resetu
+                    // safe (zbyde) [0, safeW] — barva dle aktuálního stavu
+                    hue(bar.usedLevel).setFill()
+                    NSBezierPath(rect: NSRect(x: barRect.minX, y: barRect.minY, width: barW*safeW, height: barH)).fill()
+                    // burn (spálí se) [safeW, safeW+burnW] — červená když celé shoří, jinak světlejší dle projekce
+                    (bar.overLimit ? NSColor.systemRed : hue(bar.projectedLevel).withAlphaComponent(0.45)).setFill()
+                    NSBezierPath(rect: NSRect(x: barRect.minX + barW*safeW, y: barRect.minY, width: barW*burnW, height: barH)).fill()
                     NSGraphicsContext.restoreGraphicsState()
-                    hue(bar.projectedLevel).withAlphaComponent(0.55).setStroke()
+                    NSColor.labelColor.withAlphaComponent(0.18).setStroke()
                     let border = NSBezierPath(roundedRect: barRect.insetBy(dx: 0.3, dy: 0.3), xRadius: barR, yRadius: barR)
                     border.lineWidth = 0.6; border.stroke()
                 } else {

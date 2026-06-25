@@ -9,8 +9,9 @@ public enum BurnRateLabel {
             return String(format: NSLocalizedString("burn.exhaust", bundle: b, comment: "limit in ~X"),
                           durationString(tte))
         }
-        let pct = Int((p.projectedFractionAtReset * 100).rounded())
-        return String(format: NSLocalizedString("burn.projected", bundle: b, comment: "→ ~X%% by reset"), pct)
+        // ZBÝVÁ při resetu (1 − projekce vyčerpání) — konzistentní s „% left" v popoveru
+        let leftPct = max(0, Int(((1 - p.projectedFractionAtReset) * 100).rounded()))
+        return String(format: NSLocalizedString("burn.projected", bundle: b, comment: "→ ~X%% left at reset"), leftPct)
     }
 
     /// Numerický (nelokalizovaný) kompaktní formát doby: Xd Yh / Xh Ym / Ym.

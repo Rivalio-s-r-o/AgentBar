@@ -29,6 +29,6 @@
 "collector.codex.stale" = "Data stará %lld h — spusť `codex` pro aktualizaci.";
 "collector.codex.nolimits" = "V posledních %lld sessionech nejsou žádné limity.";
 
-"burn.projected" = "→ ~%lld %% do resetu";
+"burn.projected" = "→ ~%lld %% zbyde";
 "burn.exhaust" = "limit ~za %@";
 "burn.reached" = "limit vyčerpán";

@@ -29,6 +29,6 @@
 "collector.codex.stale" = "Data %lld h old — run `codex` to refresh.";
 "collector.codex.nolimits" = "No limits in the last %lld sessions.";
 
-"burn.projected" = "→ ~%lld%% by reset";
+"burn.projected" = "→ ~%lld%% left at reset";
 "burn.exhaust" = "limit in ~%@";
 "burn.reached" = "limit reached";

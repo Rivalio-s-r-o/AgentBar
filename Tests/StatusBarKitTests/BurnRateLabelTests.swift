@@ -3,10 +3,11 @@ import Foundation
 @testable import StatusBarKit
 
 @Test func burnLabelProjectedEnCs() {
+    // projekce vyčerpání 85 % → ZBÝVÁ 15 % (konzistentní s „% left")
     let p = BurnProjection(projectedFractionAtReset: 0.85, timeToExhaustion: nil)
-    #expect(BurnRateLabel.text(p, bundle: L10n.bundle("en")).contains("85"))
-    #expect(BurnRateLabel.text(p, bundle: L10n.bundle("en")).contains("by reset"))
-    #expect(BurnRateLabel.text(p, bundle: L10n.bundle("cs")).contains("do resetu"))
+    #expect(BurnRateLabel.text(p, bundle: L10n.bundle("en")).contains("15"))
+    #expect(BurnRateLabel.text(p, bundle: L10n.bundle("en")).contains("left"))
+    #expect(BurnRateLabel.text(p, bundle: L10n.bundle("cs")).contains("zbyde"))
     // literální % se vykreslí jednou
     #expect(BurnRateLabel.text(p, bundle: L10n.bundle("en")).contains("%"))
     #expect(!BurnRateLabel.text(p, bundle: L10n.bundle("en")).contains("%%"))
