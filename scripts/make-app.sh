@@ -3,11 +3,12 @@ set -euo pipefail
 CONFIG="${1:-release}"
 swift build -c "$CONFIG"                                   # POZOR: --show-bin-path sám NESTAVÍ → nejdřív reálně postav
 BIN_DIR="$(swift build -c "$CONFIG" --show-bin-path)"
-APP="StatusBar.app"
+APP="AgentBar.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-cp "$BIN_DIR/StatusBarApp" "$APP/Contents/MacOS/StatusBar"
+cp "$BIN_DIR/StatusBarApp" "$APP/Contents/MacOS/AgentBar"   # CFBundleExecutable=AgentBar musí sedět
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # Stabilní podpis: pokud existuje code-signing identity "StatusBar Dev", podepiš jí
 # (designated requirement vázán na cert → keychain "Always Allow" vydrží napříč rebuildy).
 # Jinak fallback na ad-hoc (klíčenka se pak ptá po každém buildu) — spusť scripts/setup-signing.sh.
