@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updates: UpdateCoordinator!
     private var menuBar: MenuBarController!
     private var settings: SettingsWindowController!
-    private var timer: Timer?
+    private let refreshActivity = NSBackgroundActivityScheduler(identifier: "cz.rivalio.statusbar.refresh")
 
     override init() {
         let claudeScanner = ClaudeTokenScanner()
@@ -38,6 +38,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .system: NSApp.appearance = nil
         case .light:  NSApp.appearance = NSAppearance(named: .aqua)
         case .dark:   NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+
+    /// Naplánuje periodické obnovování přes NSBackgroundActivityScheduler (battery/thermal/Low-Power aware,
+    /// OS slučuje probuzení). Idempotentní — `invalidate()` na začátku umožní re-schedule po probuzení displeje.
+    private func startRefreshScheduler() {
+        refreshActivity.invalidate()
+        refreshActivity.repeats = true
+        refreshActivity.interval = 60
+        refreshActivity.tolerance = 20
+        refreshActivity.qualityOfService = .utility
+        refreshActivity.schedule { [weak self] completion in
+            // handler běží na background queue → hop na MainActor
+            Task { @MainActor in
+                await self?.coordinator.refreshNow(includeToday: false)
+                completion(.finished)
+            }
         }
     }
 
@@ -84,9 +101,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await coordinator.refreshNow(includeToday: false) }            // start: jen limity
         costHistory.refreshIfStale()                                          // start: nachystej 30denní data
         Task { await updates.checkIfDue() }                                   // start: zkontroluj aktualizace
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { await self.coordinator.refreshNow(includeToday: false) }   // 60s: jen limity — 30denní cenu NEVOLÁ
+        startRefreshScheduler()                                               // periodické obnovování (battery-aware)
+        // Pauza obnovování, když displej spí (lišta neviditelná); probuzení → znovu naplánovat + 1 refresh.
+        // Swift 6: observer closure je @Sendable nonisolated → @MainActor přístup přes MainActor.assumeIsolated
+        // (queue:.main běží na hlavním vlákně). Empiricky ověřeno (warnings-as-errors).
+        let nc = NSWorkspace.shared.notificationCenter
+        nc.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshActivity.invalidate() }
+        }
+        nc.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.startRefreshScheduler()
+                Task { await self.coordinator.refreshNow(includeToday: false) }
+            }
         }
     }
 }
