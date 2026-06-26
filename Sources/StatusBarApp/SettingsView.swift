@@ -187,6 +187,10 @@ private struct MenuBarPreview: View {
     private func lvlColor(_ l: UsageLevel) -> Color {
         switch l { case .normal: return .white; case .warning: return Color(.systemOrange); case .critical: return Color(.systemRed) }
     }
+    // Výplň burn proužku — jako skutečný bar (green/orange/red), ne text barva.
+    private func barFill(_ l: UsageLevel) -> Color {
+        switch l { case .normal: return .green; case .warning: return .orange; case .critical: return .red }
+    }
 
     private var visible: [ProviderUsage] { usages.filter { providers.includes($0.providerId) } }
 
@@ -214,7 +218,7 @@ private struct MenuBarPreview: View {
                     Circle().fill(dotColor(u.providerId)).frame(width: 5, height: 5)
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.white.opacity(0.18)).frame(width: 34, height: 7)
-                        Capsule().fill(lvlColor(UsageLevel.level(forPercent: used))).frame(width: 34 * CGFloat(max(0, 100 - used)) / 100, height: 7)
+                        Capsule().fill(barFill(UsageLevel.level(forPercent: used))).frame(width: 34 * CGFloat(max(0, 100 - used)) / 100, height: 7)
                     }.frame(width: 34, height: 7)
                     Text("\(shown)%").font(.system(size: 11.5, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
                 }
