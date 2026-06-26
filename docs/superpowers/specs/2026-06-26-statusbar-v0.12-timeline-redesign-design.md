@@ -29,8 +29,8 @@ Vizuální redesign **popoveru** (na styl „Timeline") a **okna Nastavení** (n
 - `ProviderBadge` (`Sources/StatusBarApp/ProviderBadge.swift`): zaoblený čtverec (22–24 px, radius 7) v barvě providera; Claude = sluneční burst (8 paprsků, `Canvas`/`Path`, bílé), Codex = `Text(">_")` mono bold bílé. Barvy: Claude `#D97557`, Codex `#0FA380`.
 - `TimelineBarView` (`Sources/StatusBarApp/TimelineBarView.swift`): z `BurnBar` (used/projected/usedLevel/projectedLevel/overLimit). Výška 10, radius 5. Vrstvy (framing ZBÝVÁ):
   - track `var(--track)` (rezerva vpravo = vyčerpáno).
-  - **plná** část `[0, 1−projected]` = co bezpečně zbyde do resetu, barva `usedLevel` (overLimit → červená).
-  - **šrafovaná** zóna `[1−projected, 1−used]` = co se do resetu spálí (diagonální pruhy, barva `usedLevel`/`projectedLevel`, ~0.55 alpha).
+  - **plná** část `[0, 1−projected]` = co bezpečně zbyde do resetu, barva `projectedLevel` (overLimit → červená).
+  - **šrafovaná** zóna `[1−projected, 1−used]` = co se do resetu spálí (diagonální pruhy, barva `usedLevel`, overLimit → červená).
   - **svislá ryska** na `x = 1−projected` (projektovaný stav při resetu), barva text, šířka 2, mírně přesahuje.
 - `FreshnessDot` (inline ve view): pulzující tečka (animace scale/opacity 2.4 s) + krátký štítek (RelativeTimeFormatter). Barva: <3 min zelená, <15 min amber, jinak červená.
 
