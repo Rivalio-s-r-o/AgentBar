@@ -33,7 +33,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         super.init()
     }
 
+    private func applyAppearance() {
+        switch prefs.appearance {
+        case .system: NSApp.appearance = nil
+        case .light:  NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:   NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        applyAppearance()
         updates = UpdateCoordinator(prefs: prefs)
         coordinator = RefreshCoordinator(store: store, providers: [
             ClaudeCodeCollector(liveSource: LiveClaudeUsageSource()),
@@ -49,13 +58,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.notifier.post(toFire)
         }
         settings = SettingsWindowController(
+            store: store,
+            updates: updates,
             onRequestNotificationPermission: { [weak self] in
                 self?.notifier.requestAuthorizationIfNeeded()
             },
             onAppearanceChanged: { [weak self] in
                 self?.menuBar?.applyAppearance()
             },
-            updates: updates,
+            onAppearanceModeChanged: { [weak self] in
+                self?.applyAppearance()
+            },
             onCheckNow: { [weak self] in Task { await self?.updates.checkNow() } }
         )
         menuBar = MenuBarController(store: store, costHistory: costHistory, prefs: prefs, updates: updates,

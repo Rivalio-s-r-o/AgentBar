@@ -1,37 +1,44 @@
 import AppKit
 import SwiftUI
+import StatusBarKit
 
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
+    private let store: UsageStore
+    private let updates: UpdateCoordinator
     private let onRequestNotificationPermission: () -> Void
     private let onAppearanceChanged: () -> Void
-    private let updates: UpdateCoordinator
+    private let onAppearanceModeChanged: () -> Void
     private let onCheckNow: () -> Void
 
-    init(onRequestNotificationPermission: @escaping () -> Void = {},
-         onAppearanceChanged: @escaping () -> Void = {},
+    init(store: UsageStore,
          updates: UpdateCoordinator,
+         onRequestNotificationPermission: @escaping () -> Void = {},
+         onAppearanceChanged: @escaping () -> Void = {},
+         onAppearanceModeChanged: @escaping () -> Void = {},
          onCheckNow: @escaping () -> Void = {}) {
+        self.store = store
+        self.updates = updates
         self.onRequestNotificationPermission = onRequestNotificationPermission
         self.onAppearanceChanged = onAppearanceChanged
-        self.updates = updates
+        self.onAppearanceModeChanged = onAppearanceModeChanged
         self.onCheckNow = onCheckNow
     }
 
     func show() {
         if window == nil {
-            let w = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 360, height: 440),
-                styleMask: [.titled, .closable],
-                backing: .buffered, defer: false)
-            w.title = String(localized: "window.settings.title", bundle: .module)
-            w.isReleasedWhenClosed = false
-            w.contentViewController = NSHostingController(
-                rootView: SettingsView(updates: updates,
+            let host = NSHostingController(
+                rootView: SettingsView(store: store, updates: updates,
                                        onRequestNotificationPermission: onRequestNotificationPermission,
                                        onAppearanceChanged: onAppearanceChanged,
+                                       onAppearanceModeChanged: onAppearanceModeChanged,
                                        onCheckNow: onCheckNow))
+            host.sizingOptions = .preferredContentSize
+            let w = NSWindow(contentViewController: host)
+            w.styleMask = [.titled, .closable]
+            w.title = String(localized: "window.settings.title", bundle: .module)
+            w.isReleasedWhenClosed = false
             w.center()
             window = w
         }
