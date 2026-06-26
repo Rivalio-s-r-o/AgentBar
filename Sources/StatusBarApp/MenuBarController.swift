@@ -101,25 +101,23 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         statusItem.button?.setAccessibilityLabel(a11yLabel(usages))
     }
 
-    /// Jednořádkový popisek pro VoiceOver (lišta je jinak pro odečítač neprůhledná).
-    private func a11yLabel(_ usages: [ProviderUsage]) -> String {
-        let parts = usages.compactMap { u -> String? in
-            guard case .ok = u.status else { return nil }
-            return String(format: NSLocalizedString("menubar.tooltip.ok", bundle: .module, comment: ""),
-                          u.displayName, max(0, 100 - u.nearestLimitPercent))
-        }
-        let body = parts.isEmpty ? NSLocalizedString("menubar.fallback", bundle: .module, comment: "") : parts.joined(separator: ", ")
-        return "AgentBar — \(body)"
-    }
-
-    private func toolTipText(_ usages: [ProviderUsage]) -> String {
+    /// Per-provider stavové popisky (sdílí tooltip i VoiceOver label) — pokrývá ok/degraded/unavailable.
+    private func statusParts(_ usages: [ProviderUsage]) -> [String] {
         usages.map { u -> String in
             switch u.status {
             case .ok: return String(format: NSLocalizedString("menubar.tooltip.ok", bundle: .module, comment: ""), u.displayName, max(0, 100 - u.nearestLimitPercent))
             case .degraded(let m): return String(format: NSLocalizedString("menubar.tooltip.degraded", bundle: .module, comment: ""), u.displayName, m)
             case .unavailable(let m): return String(format: NSLocalizedString("menubar.tooltip.unavailable", bundle: .module, comment: ""), u.displayName, m)
             }
-        }.joined(separator: "\n")
+        }
+    }
+
+    private func toolTipText(_ usages: [ProviderUsage]) -> String { statusParts(usages).joined(separator: "\n") }
+
+    /// Jednořádkový popisek pro VoiceOver (lišta je jinak pro odečítač neprůhledná).
+    private func a11yLabel(_ usages: [ProviderUsage]) -> String {
+        let parts = statusParts(usages)
+        return parts.isEmpty ? "AgentBar" : "AgentBar — \(parts.joined(separator: ", "))"
     }
 
     private func renderBurnBar(_ usages: [ProviderUsage]) {
