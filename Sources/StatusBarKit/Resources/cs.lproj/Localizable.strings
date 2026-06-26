@@ -15,6 +15,10 @@
 "window.weekly" = "Týden";
 "barsource.auto" = "Auto";
 
+"appearance.system" = "Systém";
+"appearance.light" = "Světlý";
+"appearance.dark" = "Tmavý";
+
 "style.dotPercent" = "Tečka + %";
 "style.labelPercent" = "Štítek + %";
 "style.dotOnly" = "Jen tečka";

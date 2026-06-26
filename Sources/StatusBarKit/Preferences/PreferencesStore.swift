@@ -8,6 +8,7 @@ public enum PreferenceKeys {
     public static let barWindowSource = "barWindowSource"
     public static let autoUpdateCheck = "autoUpdateCheck"
     public static let lastUpdateCheckAt = "lastUpdateCheckAt"
+    public static let appearance = "appearance"
 }
 
 public struct PreferencesStore {
@@ -47,5 +48,9 @@ public struct PreferencesStore {
     public var lastUpdateCheckAt: Double {
         get { defaults.double(forKey: PreferenceKeys.lastUpdateCheckAt) }   // default 0
         nonmutating set { defaults.set(newValue, forKey: PreferenceKeys.lastUpdateCheckAt) }
+    }
+    public var appearance: Appearance {
+        get { Appearance(rawValue: defaults.string(forKey: PreferenceKeys.appearance) ?? "") ?? .system }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: PreferenceKeys.appearance) }
     }
 }

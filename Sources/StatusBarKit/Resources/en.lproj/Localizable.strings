@@ -15,6 +15,10 @@
 "window.weekly" = "Weekly";
 "barsource.auto" = "Auto";
 
+"appearance.system" = "System";
+"appearance.light" = "Light";
+"appearance.dark" = "Dark";
+
 "style.dotPercent" = "Dot + %";
 "style.labelPercent" = "Label + %";
 "style.dotOnly" = "Dot only";
