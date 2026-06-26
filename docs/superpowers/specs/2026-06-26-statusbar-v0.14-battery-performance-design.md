@@ -6,29 +6,28 @@
 - **Verze:** 0.14.0. Větev `feat/v0.14-battery-performance`. Baseline 174 testů.
 
 ## 1. Přehled
-Pět změn, aby byla app „dobrý občan macOS" (App Nap, coalescing probuzení, žádné polování neviditelné lišty, respekt přístupnosti, žádná zbytečná práce). Žádná změna chování dat ani vzhledu — jen *kdy* a *jak často* se věci dějí.
+Tři změny, aby byla app „dobrý občan macOS" (App Nap, coalescing probuzení, žádné polování neviditelné lišty, respekt přístupnosti). Žádná změna chování dat ani vzhledu — jen *kdy* a *jak často* se věci dějí.
 
 ### Cíle
 - App se kvalifikuje pro App Nap; probuzení slučovaná OS; obnovování se odkládá při zátěži/baterii/Low Power Mode.
 - Žádné obnovování, když je displej zhasnutý (lišta neviditelná).
 - Pulzující tečka respektuje „Omezit pohyb" a neběží, když je popover zavřený.
-- Lišta se nepřekresluje, když se data nezměnila.
 
 ### Ne-cíle (YAGNI — auditem nízký dopad, odloženo)
 - `discretionary`/vlastní URLSession config (u běžné session reálně skoro nic; frekvenci řídí 5min throttle).
 - Přesun dnešního skenu mimo cooperative pool (sken malý, NEběží na hlavním vlákně — ověřeno, `RefreshCoordinator.refreshNow` spouští `fetch` přes `withTaskGroup.addTask` = cooperative pool, ne MainActor).
+- **Diff překreslení lišty** (signatura render-vstupů) — vyhozeno pro štíhlejší rozsah: auditem nízký dopad a u stylu burnBar/Timeline (který uživatel používá) by projekce v baru beztak vynutila re-render.
 - Žádné nové featury, žádný vizuální redesign.
 
-## 2. Architektura (vše App vrstva mimo §2.4)
+## 2. Architektura (vše App vrstva)
 
 | Komponenta | Změna | Test |
 |---|---|---|
 | `AppDelegate` | Timer → `NSBackgroundActivityScheduler`; observery spánku displeje; `applyAppearance` netknuté | build/smoke |
 | `AppDelegate` (sleep/wake) | `NSWorkspace.screensDidSleep/Wake` → invalidate/re-schedule + refresh | build/smoke |
 | `PopoverVisibility` (nový, App) | `@MainActor final class ObservableObject { @Published var isOpen }` | — |
-| `MenuBarController` | `NSPopoverDelegate` → přepíná `PopoverVisibility`; render přeskočí když signatura beze změny | (signatura Kit) |
+| `MenuBarController` | `NSPopoverDelegate` → přepíná `PopoverVisibility` (didShow/didClose) | build/smoke |
 | `FreshnessDot` (PopoverView) | respekt `accessibilityReduceMotion` + animace jen když `isOpen` | build/smoke |
-| `MenuBarRenderSignature` (nový, Kit) | čistá signatura render-vstupů + `Equatable` | **unit** |
 
 ### 2.1 Periodické obnovování → `NSBackgroundActivityScheduler`
 V `AppDelegate` nahradit `timer = Timer.scheduledTimer(withTimeInterval: 60, …)`:
@@ -98,28 +97,12 @@ private struct FreshnessDot: View {
 }
 ```
 
-### 2.4 Signatura překreslení lišty (Kit, pure, testovatelné)
-Nový `MenuBarRenderSignature` (Kit) = `Equatable` snímek toho, co určuje vzhled lišty, NEZÁVISLE na `lastUpdated` (které se mění každý fetch i při stejných číslech):
-```swift
-public struct MenuBarRenderSignature: Equatable, Sendable {
-    // per zobrazený provider: id, leading kind+text, %text, level; pro burnBar: BurnBar?+percent
-    // (přesný tvar dotáhne plán — stačí Equatable a deterministicky odvozený z render-vstupů)
-}
-```
-Buildr: `MenuBarRenderSignature.make(usages:style:showUsedPercent:source:providers:now:)` (now jen tam, kde už segments/burnBar `now` berou — pozor: burnBar projekce závisí na `now` → signatura se MĚNÍ s časem, takže diff by burnBar nikdy nepřeskočil. **Rozhodnutí:** pro burnBar styl signatura zahrne `BurnBar` (used/projected/levels/overLimit) — ty se s časem mění jen pomalu (projekce), ale mění → diff u burnBaru bude skoro vždy re-renderovat. Pro burnBar tedy diff NEpřináší zisk; přínos je hlavně u textových stylů (dotPercent/labelPercent/dotOnly/worst), kde se signatura mění jen při změně % nebo levelu. **Akceptováno:** diff přeskočí redundantní re-render u textových stylů; u burnBaru re-renderuje dál (projekce se mění). To je korektní — burnBar SE vizuálně mění.)
-
-`MenuBarController` drží `lastSignature`; v `render`: spočítat novou signaturu z (filtrovaných) usages + prefs; pokud `== lastSignature` → `return` (nepřekreslovat); jinak vykreslit + uložit. Tooltip se aktualizuje vždy? Ne — tooltip taky jen při změně (součást rozhodnutí; jednodušší: přeskočit celý render včetně tooltipu, protože tooltip se mění se stejnými daty).
-
-**R-OVĚŘENÍ (plan-forge):** že signatura je deterministická, Equatable, a že pro identická data (textový styl) vrací shodu (diff přeskočí), ale při změně %/level/providerů/stylu se liší (re-render proběhne). Že `lastUpdated` NENÍ v signatuře.
-
 ## 3. Verifikace a meze
-- **Auto (Kit):** `MenuBarRenderSignature` — determinismus, Equatable, shoda při identických datech textového stylu, rozdíl při změně %/level/style/providers, `lastUpdated` ignorováno. `swift build` + `swift test`.
-- **GAP (uživatel/manuální):** App Nap status + nízká energie v Monitoru aktivity; reduce-motion → statická tečka; spánek displeje → obnovování se zastaví, probuzení → jeden refresh; lišta se po 60 s nepřekresluje při stejných číslech (těžko pozorovatelné — spíš měření energie).
-- **Build:** 0 warningů, Swift 6 sendable u observerů/scheduler handleru.
+- **Auto:** žádná nová Kit logika → žádné nové unit testy; existujících 174 testů musí dál procházet (App-only změny). `swift build` (0 warningů, Swift 6 sendable u observerů/scheduler handleru) + `swift test`.
+- **GAP (uživatel/manuální):** App Nap status + nízká energie v Monitoru aktivity; reduce-motion → statická tečka; spánek displeje → obnovování se zastaví, probuzení → jeden refresh.
 
 ## 4. Rizika
 - **R1 (střední) — Swift 6 concurrency u scheduler handleru + NSWorkspace observerů.** Handler `NSBackgroundActivityScheduler` běží na background queue; `@Sendable` closure → `Task { @MainActor }`. Observery `queue: .main` ale closure musí být `@Sendable`. Mitigace: `[weak self]` + hop přes Task; plan-forge ověří compile.
 - **R2 (nízké) — `NSBackgroundActivityScheduler` odkládá víc, čísla v liště občas starší.** Akceptováno (popover-open si vynutí refresh; síť stejně 5min throttle).
-- **R3 (nízké) — diff signatura u burnBaru nepřeskočí** (projekce se mění s časem). Akceptováno — burnBar se vizuálně mění; zisk je u textových stylů.
-- **R4 (nízké) — `PopoverVisibility` env object plumbing** přes hlubokou hierarchii. Mitigace: `.environmentObject` na rootu, `@EnvironmentObject` ve `FreshnessDot`.
-- **R5 (nízké) — `screensDidSleep` při externím monitoru / clamshell** může chovat různě. Akceptováno (degraduje na „refresh jako dřív").
+- **R3 (nízké) — `PopoverVisibility` env object plumbing** přes hlubokou hierarchii. Mitigace: `.environmentObject` na rootu, `@EnvironmentObject` ve `FreshnessDot`.
+- **R4 (nízké) — `screensDidSleep` při externím monitoru / clamshell** může chovat různě. Akceptováno (degraduje na „refresh jako dřív").
