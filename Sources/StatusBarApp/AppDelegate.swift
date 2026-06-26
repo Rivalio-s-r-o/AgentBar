@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updates: UpdateCoordinator!
     private var menuBar: MenuBarController!
     private var settings: SettingsWindowController!
-    private let refreshActivity = NSBackgroundActivityScheduler(identifier: "cz.rivalio.statusbar.refresh")
+    private var refreshActivity: NSBackgroundActivityScheduler?
 
     override init() {
         let claudeScanner = ClaudeTokenScanner()
@@ -42,20 +42,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Naplánuje periodické obnovování přes NSBackgroundActivityScheduler (battery/thermal/Low-Power aware,
-    /// OS slučuje probuzení). Idempotentní — `invalidate()` na začátku umožní re-schedule po probuzení displeje.
+    /// OS slučuje probuzení). Vždy vytvoří ČERSTVOU instanci (stará se invaliduje) — robustní napříč
+    /// pauzou/obnovou při spánku displeje bez spoléhání na re-schedule invalidované instance.
     private func startRefreshScheduler() {
-        refreshActivity.invalidate()
-        refreshActivity.repeats = true
-        refreshActivity.interval = 60
-        refreshActivity.tolerance = 20
-        refreshActivity.qualityOfService = .utility
-        refreshActivity.schedule { [weak self] completion in
+        refreshActivity?.invalidate()
+        let activity = NSBackgroundActivityScheduler(identifier: "cz.rivalio.statusbar.refresh")
+        activity.repeats = true
+        activity.interval = 60
+        activity.tolerance = 20
+        activity.qualityOfService = .utility
+        activity.schedule { [weak self] completion in
             // handler běží na background queue → hop na MainActor
             Task { @MainActor in
                 await self?.coordinator.refreshNow(includeToday: false)
                 completion(.finished)
             }
         }
+        refreshActivity = activity
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -107,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // (queue:.main běží na hlavním vlákně). Empiricky ověřeno (warnings-as-errors).
         let nc = NSWorkspace.shared.notificationCenter
         nc.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refreshActivity.invalidate() }
+            MainActor.assumeIsolated { self?.refreshActivity?.invalidate() }
         }
         nc.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
