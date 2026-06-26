@@ -14,14 +14,18 @@
 "popover.pace" = "Tempo: %@";
 "popover.month" = "30 dní";
 "popover.month.detail" = "%@ tok ≈ %@";
+"popover.month.compact" = "30 dní · %@ tok";
 "popover.computing" = "30 dní: počítám…";
 
 "settings.title" = "Nastavení";
 "settings.general" = "Obecné";
 "settings.launch" = "Spouštět při přihlášení";
-"settings.bar" = "Zobrazení lišty";
-"settings.barWindow" = "Okno v liště";
-"settings.style" = "Styl";
+"settings.bar" = "Zobrazení v menu baru";
+"settings.barWindow" = "Sledované okno";
+"settings.style" = "Styl ukazatele";
+"settings.appearance" = "Vzhled";
+"settings.preview" = "Náhled v menu baru";
+"settings.previewCaption" = "Styl %@ · ukazuje %@";
 "settings.numberShows" = "Číslo ukazuje";
 "settings.remaining" = "Zbývající";
 "settings.used" = "Vyčerpané";

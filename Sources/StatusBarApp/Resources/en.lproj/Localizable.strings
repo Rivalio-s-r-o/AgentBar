@@ -14,14 +14,18 @@
 "popover.pace" = "Pace: %@";
 "popover.month" = "30 days";
 "popover.month.detail" = "%@ tok ≈ %@";
+"popover.month.compact" = "30 days · %@ tok";
 "popover.computing" = "30 days: computing…";
 
 "settings.title" = "Settings";
 "settings.general" = "General";
 "settings.launch" = "Launch at login";
 "settings.bar" = "Menu bar display";
-"settings.barWindow" = "Menu bar window";
-"settings.style" = "Style";
+"settings.barWindow" = "Watched window";
+"settings.style" = "Indicator style";
+"settings.appearance" = "Appearance";
+"settings.preview" = "Menu bar preview";
+"settings.previewCaption" = "Style %@ · shows %@";
 "settings.numberShows" = "Number shows";
 "settings.remaining" = "Remaining";
 "settings.used" = "Used";
