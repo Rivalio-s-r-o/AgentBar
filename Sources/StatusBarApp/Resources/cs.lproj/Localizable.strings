@@ -20,6 +20,7 @@
 "settings.launch" = "Spouštět při přihlášení";
 "settings.bar" = "Zobrazení v menu baru";
 "settings.barWindow" = "Sledované okno";
+"settings.barProviders" = "Zobrazit v liště";
 "settings.style" = "Styl ukazatele";
 "settings.appearance" = "Vzhled";
 "settings.preview" = "Náhled v menu baru";

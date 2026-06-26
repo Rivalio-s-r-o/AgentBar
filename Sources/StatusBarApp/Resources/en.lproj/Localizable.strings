@@ -20,6 +20,7 @@
 "settings.launch" = "Launch at login";
 "settings.bar" = "Menu bar display";
 "settings.barWindow" = "Watched window";
+"settings.barProviders" = "Show in menu bar";
 "settings.style" = "Indicator style";
 "settings.appearance" = "Appearance";
 "settings.preview" = "Menu bar preview";

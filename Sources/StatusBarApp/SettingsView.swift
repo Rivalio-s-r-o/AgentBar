@@ -16,6 +16,7 @@ struct SettingsView: View {
     @AppStorage(PreferenceKeys.barStyle) private var barStyle: MenuBarStyle = .dotPercent
     @AppStorage(PreferenceKeys.showUsedPercent) private var showUsedPercent = false
     @AppStorage(PreferenceKeys.barWindowSource) private var barWindowSource: BarWindowSource = .auto
+    @AppStorage(PreferenceKeys.barProviders) private var barProviders: BarProviders = .both
     @AppStorage(PreferenceKeys.appearance) private var appearance: Appearance = .system
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
@@ -40,7 +41,8 @@ struct SettingsView: View {
 
             // Náhled v menu baru
             SettingsSection(String(localized: "settings.preview", bundle: .module)) {
-                MenuBarPreview(usages: store.orderedUsages, showUsedPercent: showUsedPercent, source: barWindowSource)
+                MenuBarPreview(usages: store.orderedUsages, style: barStyle, showUsedPercent: showUsedPercent,
+                               source: barWindowSource, providers: barProviders)
                     .padding(6)
             } caption: { Text(previewCaption).font(.system(size: 10.5)).foregroundStyle(.tertiary) }
 
@@ -60,6 +62,12 @@ struct SettingsView: View {
 
             // Zobrazení v menu baru
             SettingsSection(String(localized: "settings.bar", bundle: .module)) {
+                SettingsRow(String(localized: "settings.barProviders", bundle: .module)) {
+                    Picker("", selection: $barProviders) {
+                        ForEach(BarProviders.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    }.labelsHidden().fixedSize().onChange(of: barProviders) { _, _ in onAppearanceChanged() }
+                }
+                rowDivider
                 SettingsRow(String(localized: "settings.style", bundle: .module)) {
                     Picker("", selection: $barStyle) {
                         ForEach(MenuBarStyle.allCases, id: \.self) { Text($0.displayName).tag($0) }
@@ -164,36 +172,28 @@ private struct SettingsRow<Trailing: View>: View {
     }
 }
 
-/// Živý náhled menu baru v Nastavení.
+/// Živý náhled menu baru v Nastavení — vykresluje SKUTEČNÝ zvolený styl (reaguje na styl/providery/číslo/okno).
 private struct MenuBarPreview: View {
     let usages: [ProviderUsage]
+    let style: MenuBarStyle
     let showUsedPercent: Bool
     let source: BarWindowSource
+    let providers: BarProviders
 
     private func dotColor(_ id: ProviderID) -> Color {
         id == .claudeCode ? Color(red: 0.85, green: 0.46, blue: 0.34) : Color(red: 0.06, green: 0.64, blue: 0.50)
     }
-    private func levelColor(_ used: Int) -> Color {
-        switch UsageLevel.level(forPercent: used) {
-        case .normal: return .green; case .warning: return .orange; case .critical: return .red
-        }
+    // Barva textu/tečky na tmavém gradientu lišty (normal = bílá, jako labelColor v menu baru).
+    private func lvlColor(_ l: UsageLevel) -> Color {
+        switch l { case .normal: return .white; case .warning: return Color(.systemOrange); case .critical: return Color(.systemRed) }
     }
+
+    private var visible: [ProviderUsage] { usages.filter { providers.includes($0.providerId) } }
 
     var body: some View {
         HStack(spacing: 11) {
             Spacer()
-            ForEach(usages.prefix(2).filter { if case .unavailable = $0.status { return false }; return true }, id: \.providerId) { u in
-                let used = u.usedPercent(for: source)
-                let shown = showUsedPercent ? used : max(0, 100 - used)
-                HStack(spacing: 6) {
-                    Circle().fill(dotColor(u.providerId)).frame(width: 5, height: 5)
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.18)).frame(width: 34, height: 7)
-                        Capsule().fill(levelColor(used)).frame(width: 34 * CGFloat(max(0, 100 - used)) / 100, height: 7)
-                    }.frame(width: 34, height: 7)
-                    Text("\(shown)%").font(.system(size: 11.5, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
-                }
-            }
+            content
             Text(Date.now, format: .dateTime.hour().minute()).font(.system(size: 11)).monospacedDigit().foregroundStyle(.white.opacity(0.55))
         }
         .padding(.horizontal, 11).frame(height: 26)
@@ -203,5 +203,37 @@ private struct MenuBarPreview: View {
                                             Color(red: 0.64, green: 0.36, blue: 0.47)],
                                    startPoint: .topLeading, endPoint: .bottomTrailing))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder private var content: some View {
+        if style == .burnBar {
+            ForEach(visible.prefix(2).filter { if case .unavailable = $0.status { return false }; return true }, id: \.providerId) { u in
+                let used = u.usedPercent(for: source)
+                let shown = showUsedPercent ? used : max(0, 100 - used)
+                HStack(spacing: 6) {
+                    Circle().fill(dotColor(u.providerId)).frame(width: 5, height: 5)
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.18)).frame(width: 34, height: 7)
+                        Capsule().fill(lvlColor(UsageLevel.level(forPercent: used))).frame(width: 34 * CGFloat(max(0, 100 - used)) / 100, height: 7)
+                    }.frame(width: 34, height: 7)
+                    Text("\(shown)%").font(.system(size: 11.5, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
+                }
+            }
+        } else {
+            let segs = MenuBarTitleBuilder.segments(for: visible, style: style, showUsedPercent: showUsedPercent, source: source)
+            ForEach(Array(segs.enumerated()), id: \.offset) { _, s in
+                HStack(spacing: 5) {
+                    switch s.leading {
+                    case .providerDot: Circle().fill(dotColor(s.providerId)).frame(width: 5, height: 5)
+                    case .levelDot:    Circle().fill(lvlColor(s.level)).frame(width: 5, height: 5)
+                    case .label(let t): Text(t).font(.system(size: 11.5, weight: .semibold)).foregroundStyle(lvlColor(s.level))
+                    case .none:        EmptyView()
+                    }
+                    if !s.text.isEmpty {
+                        Text(s.text).font(.system(size: 11.5, weight: .semibold)).monospacedDigit().foregroundStyle(lvlColor(s.level))
+                    }
+                }
+            }
+        }
     }
 }

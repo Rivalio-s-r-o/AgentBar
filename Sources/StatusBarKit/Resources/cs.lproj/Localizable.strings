@@ -19,6 +19,8 @@
 "appearance.light" = "Světlý";
 "appearance.dark" = "Tmavý";
 
+"barprov.both" = "Oba";
+
 "style.dotPercent" = "Tečka + %";
 "style.labelPercent" = "Štítek + %";
 "style.dotOnly" = "Jen tečka";

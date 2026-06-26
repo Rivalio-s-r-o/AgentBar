@@ -60,7 +60,9 @@ final class MenuBarController {
         case .codex: return NSColor(red: 0.06, green: 0.64, blue: 0.50, alpha: 1)
         }
     }
-    private func render(_ usages: [ProviderUsage]) {
+    private func render(_ allUsages: [ProviderUsage]) {
+        // Volba uživatele: které providery lišta ukazuje (Oba/Claude/Codex).
+        let usages = allUsages.filter { prefs.barProviders.includes($0.providerId) }
         if prefs.barStyle == .burnBar { renderBurnBar(usages); return }
         statusItem.button?.image = nil   // jiný styl → zruš případný obrázek
         let segs = MenuBarTitleBuilder.segments(for: usages,

@@ -9,6 +9,7 @@ public enum PreferenceKeys {
     public static let autoUpdateCheck = "autoUpdateCheck"
     public static let lastUpdateCheckAt = "lastUpdateCheckAt"
     public static let appearance = "appearance"
+    public static let barProviders = "barProviders"
 }
 
 public struct PreferencesStore {
@@ -52,5 +53,9 @@ public struct PreferencesStore {
     public var appearance: Appearance {
         get { Appearance(rawValue: defaults.string(forKey: PreferenceKeys.appearance) ?? "") ?? .system }
         nonmutating set { defaults.set(newValue.rawValue, forKey: PreferenceKeys.appearance) }
+    }
+    public var barProviders: BarProviders {
+        get { BarProviders(rawValue: defaults.string(forKey: PreferenceKeys.barProviders) ?? "") ?? .both }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: PreferenceKeys.barProviders) }
     }
 }

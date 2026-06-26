@@ -19,6 +19,8 @@
 "appearance.light" = "Light";
 "appearance.dark" = "Dark";
 
+"barprov.both" = "Both";
+
 "style.dotPercent" = "Dot + %";
 "style.labelPercent" = "Label + %";
 "style.dotOnly" = "Dot only";
