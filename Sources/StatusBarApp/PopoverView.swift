@@ -63,14 +63,25 @@ struct PopoverView: View {
     }
 }
 
-/// Pulzující tečka čerstvosti dat (dle designu).
+/// Pulzující tečka čerstvosti dat. Animuje JEN když je popover otevřený a není zapnuté „Omezit pohyb"
+/// (jinak statická tečka) — žádný Core Animation heartbeat při zavřeném popoveru / reduce-motion.
 private struct FreshnessDot: View {
     let color: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var vis: PopoverVisibility
     @State private var pulse = false
     var body: some View {
         Circle().fill(color).frame(width: 5, height: 5)
             .opacity(pulse ? 0.45 : 1).scaleEffect(pulse ? 0.82 : 1)
-            .onAppear { withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) { pulse = true } }
+            .onAppear { apply(vis.isOpen) }
+            .onChange(of: vis.isOpen) { _, open in apply(open) }
+    }
+    private func apply(_ open: Bool) {
+        if open && !reduceMotion {
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) { pulse = true }
+        } else {
+            withAnimation(nil) { pulse = false }   // okamžitě zastav + reset
+        }
     }
 }
 

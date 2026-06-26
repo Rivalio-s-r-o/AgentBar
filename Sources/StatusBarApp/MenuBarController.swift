@@ -4,7 +4,7 @@ import SwiftUI
 import StatusBarKit
 
 @MainActor
-final class MenuBarController {
+final class MenuBarController: NSObject, NSPopoverDelegate {
     private let store: UsageStore
     private let prefs: PreferencesStore
     private let updates: UpdateCoordinator
@@ -12,6 +12,8 @@ final class MenuBarController {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private var cancellable: AnyCancellable?
+    /// Stav otevřenosti popoveru — předáno do SwiftUI (FreshnessDot animuje jen když je otevřený).
+    let popoverVisibility = PopoverVisibility()
 
     private let onOpenSettings: () -> Void
     init(store: UsageStore, costHistory: CostHistoryStore, prefs: PreferencesStore, updates: UpdateCoordinator,
@@ -21,6 +23,7 @@ final class MenuBarController {
         self.updates = updates
         self.onRefresh = onClick
         self.onOpenSettings = onOpenSettings
+        super.init()
         render(store.orderedUsages)
         cancellable = store.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { [weak self] in
@@ -29,14 +32,20 @@ final class MenuBarController {
             }
         }
         popover.behavior = .transient
+        popover.delegate = self
         let hosting = NSHostingController(rootView:
             PopoverView(store: store, costHistory: costHistory, updates: updates, onRefresh: onClick,
-                        onQuit: { NSApp.terminate(nil) }, onOpenSettings: onOpenSettings))
+                        onQuit: { NSApp.terminate(nil) }, onOpenSettings: onOpenSettings)
+                .environmentObject(popoverVisibility))
         hosting.sizingOptions = .preferredContentSize
         popover.contentViewController = hosting
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
     }
+
+    // NSPopoverDelegate: přepíná stav viditelnosti pro FreshnessDot.
+    func popoverDidShow(_ notification: Notification) { popoverVisibility.isOpen = true }
+    func popoverDidClose(_ notification: Notification) { popoverVisibility.isOpen = false }
 
     /// Překreslí lištu po změně stylu/významu % v Nastavení.
     func applyAppearance() { render(store.orderedUsages) }
