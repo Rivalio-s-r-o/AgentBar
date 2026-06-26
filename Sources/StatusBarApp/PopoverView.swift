@@ -75,6 +75,7 @@ private struct FreshnessDot: View {
             .opacity(pulse ? 0.45 : 1).scaleEffect(pulse ? 0.82 : 1)
             .onAppear { apply(vis.isOpen) }
             .onChange(of: vis.isOpen) { _, open in apply(open) }
+            .accessibilityHidden(true)
     }
     private func apply(_ open: Bool) {
         if open && !reduceMotion {
@@ -135,9 +136,10 @@ private struct ProviderCard: View {
                             .font(.system(size: 10.5)).foregroundStyle(.tertiary).monospacedDigit()
                     }
                 }
-                TimelineBarView(bar: BurnBarBuilder.bar(forWindow: w, now: Date()))
+                TimelineBarView(bar: BurnBarBuilder.bar(forWindow: w, now: Date())).accessibilityHidden(true)
                 paceRow(w)
             }
+            .accessibilityElement(children: .combine)
         }
     }
 

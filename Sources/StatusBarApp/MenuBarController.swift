@@ -98,6 +98,18 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         if segs.isEmpty { title.append(NSAttributedString(string: NSLocalizedString("menubar.fallback", bundle: .module, comment: ""))) }
         statusItem.button?.attributedTitle = title
         statusItem.button?.toolTip = toolTipText(usages)
+        statusItem.button?.setAccessibilityLabel(a11yLabel(usages))
+    }
+
+    /// Jednořádkový popisek pro VoiceOver (lišta je jinak pro odečítač neprůhledná).
+    private func a11yLabel(_ usages: [ProviderUsage]) -> String {
+        let parts = usages.compactMap { u -> String? in
+            guard case .ok = u.status else { return nil }
+            return String(format: NSLocalizedString("menubar.tooltip.ok", bundle: .module, comment: ""),
+                          u.displayName, max(0, 100 - u.nearestLimitPercent))
+        }
+        let body = parts.isEmpty ? NSLocalizedString("menubar.fallback", bundle: .module, comment: "") : parts.joined(separator: ", ")
+        return "AgentBar — \(body)"
     }
 
     private func toolTipText(_ usages: [ProviderUsage]) -> String {
@@ -130,5 +142,6 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             statusItem.button?.image = BurnBarRenderer.image(groups: groups)
         }
         statusItem.button?.toolTip = toolTipText(usages)
+        statusItem.button?.setAccessibilityLabel(a11yLabel(usages))
     }
 }
