@@ -4,7 +4,7 @@ import StatusBarKit
 /// Badge ikona providera v zaobleném čtverci (dle designu): Claude = sluneční „burst", Codex = „>_".
 struct ProviderBadge: View {
     let providerId: ProviderID
-    var size: CGFloat = 24
+    var size: CGFloat = 20
 
     private var accent: Color {
         providerId == .claudeCode

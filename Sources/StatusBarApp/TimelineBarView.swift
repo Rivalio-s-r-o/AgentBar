@@ -27,12 +27,12 @@ struct TimelineBarView: View {
                     }
                 }
                 .clipShape(Capsule())
-                // ryska projekce (přesah ±2 mimo clip)
-                Rectangle().fill(Color.primary).frame(width: 2, height: 14)
-                    .offset(x: max(0, w * safe - 1))
+                // ryska projekce (mírný přesah mimo clip)
+                Rectangle().fill(Color.primary).frame(width: 1.5, height: 9)
+                    .offset(x: max(0, w * safe - 0.75))
             }
         }
-        .frame(height: 10)
+        .frame(height: 6)
     }
 }
 
@@ -47,8 +47,8 @@ private struct TimelineHatch: View {
                 var p = Path()
                 p.move(to: CGPoint(x: x, y: size.height))
                 p.addLine(to: CGPoint(x: x + size.height, y: 0))
-                ctx.stroke(p, with: .color(color.opacity(0.85)), lineWidth: 1.5)
-                x += 5
+                ctx.stroke(p, with: .color(color.opacity(0.85)), lineWidth: 1.2)
+                x += 4
             }
         }
     }
