@@ -36,12 +36,13 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 13) {
 
             // Náhled v menu baru
             SettingsSection(String(localized: "settings.preview", bundle: .module)) {
                 MenuBarPreview(usages: store.orderedUsages, showUsedPercent: showUsedPercent, source: barWindowSource)
-            } caption: { Text(previewCaption).font(.system(size: 11)).foregroundStyle(.tertiary) }
+                    .padding(6)
+            } caption: { Text(previewCaption).font(.system(size: 10.5)).foregroundStyle(.tertiary) }
 
             // Obecné
             SettingsSection(String(localized: "settings.general", bundle: .module)) {
@@ -104,12 +105,13 @@ struct SettingsView: View {
                 }
             }
         }
-        .padding(18)
-        .frame(width: 404)
+        .controlSize(.small)
+        .padding(14)
+        .frame(width: 358)
         .onAppear { launchAtLogin = LaunchAtLogin.isEnabled }
     }
 
-    private var rowDivider: some View { Divider().padding(.leading, 14) }
+    private var rowDivider: some View { Divider().padding(.leading, 12) }
 }
 
 // MARK: - Stavební bloky (styl macOS System Settings)
@@ -124,12 +126,12 @@ private struct SettingsSection<Content: View, Caption: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased()).font(.system(size: 11, weight: .bold)).tracking(0.6)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased()).font(.system(size: 10.5, weight: .bold)).tracking(0.5)
                 .foregroundStyle(.tertiary).padding(.horizontal, 4)
             VStack(spacing: 0) { content }
-                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 9))
+                .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
             caption.padding(.horizontal, 4)
         }
     }
@@ -151,14 +153,14 @@ private struct SettingsRow<Trailing: View>: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(label).font(.system(size: 13.5))
-                if let s = subtitle { Text(s).font(.system(size: 11)).foregroundStyle(.tertiary) }
+                Text(label).font(.system(size: 12.5))
+                if let s = subtitle { Text(s).font(.system(size: 10.5)).foregroundStyle(.tertiary) }
             }
             Spacer(minLength: 8)
             trailing
-        }.padding(.horizontal, 14).frame(minHeight: 44)
+        }.padding(.horizontal, 12).frame(minHeight: 34)
     }
 }
 
@@ -178,23 +180,23 @@ private struct MenuBarPreview: View {
     }
 
     var body: some View {
-        HStack(spacing: 13) {
+        HStack(spacing: 11) {
             Spacer()
             ForEach(usages.prefix(2).filter { if case .unavailable = $0.status { return false }; return true }, id: \.providerId) { u in
                 let used = u.usedPercent(for: source)
                 let shown = showUsedPercent ? used : max(0, 100 - used)
                 HStack(spacing: 6) {
-                    Circle().fill(dotColor(u.providerId)).frame(width: 6, height: 6)
+                    Circle().fill(dotColor(u.providerId)).frame(width: 5, height: 5)
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.18)).frame(width: 36, height: 9)
-                        Capsule().fill(levelColor(used)).frame(width: 36 * CGFloat(max(0, 100 - used)) / 100, height: 9)
-                    }.frame(width: 36, height: 9)
-                    Text("\(shown)%").font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
+                        Capsule().fill(Color.white.opacity(0.18)).frame(width: 34, height: 7)
+                        Capsule().fill(levelColor(used)).frame(width: 34 * CGFloat(max(0, 100 - used)) / 100, height: 7)
+                    }.frame(width: 34, height: 7)
+                    Text("\(shown)%").font(.system(size: 11.5, weight: .semibold)).monospacedDigit().foregroundStyle(.white)
                 }
             }
-            Text(Date.now, format: .dateTime.hour().minute()).font(.system(size: 12)).monospacedDigit().foregroundStyle(.white.opacity(0.55))
+            Text(Date.now, format: .dateTime.hour().minute()).font(.system(size: 11)).monospacedDigit().foregroundStyle(.white.opacity(0.55))
         }
-        .padding(.horizontal, 12).frame(height: 30)
+        .padding(.horizontal, 11).frame(height: 26)
         .frame(maxWidth: .infinity)
         .background(LinearGradient(colors: [Color(red: 0.17, green: 0.23, blue: 0.40),
                                             Color(red: 0.36, green: 0.29, blue: 0.55),
