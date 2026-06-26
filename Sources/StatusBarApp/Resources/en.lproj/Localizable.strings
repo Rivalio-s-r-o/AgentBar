@@ -32,18 +32,19 @@
 "settings.alertToggle" = "Alert when remaining limits drop";
 "settings.threshold" = "Threshold (left ≤)";
 "settings.percent" = "%lld %%";
-"settings.version" = "StatusBar %@";
+"settings.version" = "AgentBar %@";
+"settings.about" = "About AgentBar…";
 
 "notif.title" = "%@ — %@";
 "notif.body" = "%lld%% left";
 "notif.body.reset" = " · resets in %@";
 
-"menubar.fallback" = "StatusBar";
+"menubar.fallback" = "AgentBar";
 "menubar.tooltip.ok" = "%@: %lld%% left";
 "menubar.tooltip.degraded" = "%@: ⚠︎ %@";
 "menubar.tooltip.unavailable" = "%@: — %@";
 
-"window.settings.title" = "StatusBar — Settings";
+"window.settings.title" = "AgentBar — Settings";
 
 "popover.update" = "New version %@ →";
 "settings.updates" = "Updates";

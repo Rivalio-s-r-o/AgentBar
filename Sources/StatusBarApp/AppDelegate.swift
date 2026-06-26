@@ -41,6 +41,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func showAbout() {
+        NSApp.activate()
+        let credits = NSAttributedString(
+            string: "github.com/Rivalio-s-r-o/StatusBar",
+            attributes: [.foregroundColor: NSColor.secondaryLabelColor])
+        let version = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: "AgentBar",
+            .applicationVersion: version,
+            .credits: credits,
+        ])
+    }
+
     /// Naplánuje periodické obnovování přes NSBackgroundActivityScheduler (battery/thermal/Low-Power aware,
     /// OS slučuje probuzení). Vždy vytvoří ČERSTVOU instanci (stará se invaliduje) — robustní napříč
     /// pauzou/obnovou při spánku displeje bez spoléhání na re-schedule invalidované instance.
@@ -89,7 +102,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onAppearanceModeChanged: { [weak self] in
                 self?.applyAppearance()
             },
-            onCheckNow: { [weak self] in Task { await self?.updates.checkNow() } }
+            onCheckNow: { [weak self] in Task { await self?.updates.checkNow() } },
+            onAbout: { [weak self] in self?.showAbout() }
         )
         menuBar = MenuBarController(store: store, costHistory: costHistory, prefs: prefs, updates: updates,
             onClick: { [weak self] in

@@ -32,18 +32,19 @@
 "settings.alertToggle" = "Upozornit, když klesnou zbývající limity";
 "settings.threshold" = "Práh (zbývá ≤)";
 "settings.percent" = "%lld %%";
-"settings.version" = "StatusBar %@";
+"settings.version" = "AgentBar %@";
+"settings.about" = "O aplikaci AgentBar…";
 
 "notif.title" = "%@ — %@";
 "notif.body" = "Zbývá %lld%%";
 "notif.body.reset" = " · reset za %@";
 
-"menubar.fallback" = "StatusBar";
+"menubar.fallback" = "AgentBar";
 "menubar.tooltip.ok" = "%@: %lld%% zbývá";
 "menubar.tooltip.degraded" = "%@: ⚠︎ %@";
 "menubar.tooltip.unavailable" = "%@: — %@";
 
-"window.settings.title" = "StatusBar — Nastavení";
+"window.settings.title" = "AgentBar — Nastavení";
 
 "popover.update" = "Nová verze %@ →";
 "settings.updates" = "Aktualizace";

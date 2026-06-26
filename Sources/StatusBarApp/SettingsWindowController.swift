@@ -11,19 +11,22 @@ final class SettingsWindowController {
     private let onAppearanceChanged: () -> Void
     private let onAppearanceModeChanged: () -> Void
     private let onCheckNow: () -> Void
+    private let onAbout: () -> Void
 
     init(store: UsageStore,
          updates: UpdateCoordinator,
          onRequestNotificationPermission: @escaping () -> Void = {},
          onAppearanceChanged: @escaping () -> Void = {},
          onAppearanceModeChanged: @escaping () -> Void = {},
-         onCheckNow: @escaping () -> Void = {}) {
+         onCheckNow: @escaping () -> Void = {},
+         onAbout: @escaping () -> Void = {}) {
         self.store = store
         self.updates = updates
         self.onRequestNotificationPermission = onRequestNotificationPermission
         self.onAppearanceChanged = onAppearanceChanged
         self.onAppearanceModeChanged = onAppearanceModeChanged
         self.onCheckNow = onCheckNow
+        self.onAbout = onAbout
     }
 
     func show() {
@@ -33,7 +36,8 @@ final class SettingsWindowController {
                                        onRequestNotificationPermission: onRequestNotificationPermission,
                                        onAppearanceChanged: onAppearanceChanged,
                                        onAppearanceModeChanged: onAppearanceModeChanged,
-                                       onCheckNow: onCheckNow))
+                                       onCheckNow: onCheckNow,
+                                       onAbout: onAbout))
             host.sizingOptions = .preferredContentSize
             let w = NSWindow(contentViewController: host)
             w.styleMask = [.titled, .closable]

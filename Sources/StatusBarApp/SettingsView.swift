@@ -9,6 +9,7 @@ struct SettingsView: View {
     var onAppearanceChanged: () -> Void = {}
     var onAppearanceModeChanged: () -> Void = {}
     var onCheckNow: () -> Void = {}
+    var onAbout: () -> Void = {}
 
     @AppStorage(PreferenceKeys.notificationsEnabled) private var notifsEnabled = false
     @AppStorage(PreferenceKeys.autoUpdateCheck) private var autoUpdate = true
@@ -112,6 +113,11 @@ struct SettingsView: View {
                     Button(String(localized: "settings.checkNow", bundle: .module)) { onCheckNow() }.disabled(updates.isChecking)
                 }
             }
+
+            HStack {
+                Button(String(localized: "settings.about", bundle: .module)) { onAbout() }.buttonStyle(.link)
+                Spacer()
+            }.padding(.top, 2)
         }
         .controlSize(.small)
         .padding(14)
