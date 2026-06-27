@@ -27,10 +27,10 @@ private let now = Date(timeIntervalSince1970: 1_000_000)
 }
 @Test func paceLabelTexty() {
     let cs = L10n.bundle("cs"); let en = L10n.bundle("en")
-    #expect(PaceLabel.text(deltaPercent: 20, bundle: cs) == "napřed o 20 %")
-    #expect(PaceLabel.text(deltaPercent: -42, bundle: cs) == "pozadu o 42 %")
-    #expect(PaceLabel.text(deltaPercent: 0, bundle: cs) == "v tempu")
-    #expect(PaceLabel.text(deltaPercent: 20, bundle: en) == "20% ahead")
-    #expect(PaceLabel.text(deltaPercent: -42, bundle: en) == "42% behind")
+    #expect(PaceLabel.text(deltaPercent: 20, bundle: cs) == "skluz 20 %")
+    #expect(PaceLabel.text(deltaPercent: -42, bundle: cs) == "rezerva 42 %")
+    #expect(PaceLabel.text(deltaPercent: 0, bundle: cs) == "rovnoměrné tempo")
+    #expect(PaceLabel.text(deltaPercent: 20, bundle: en) == "20% over")
+    #expect(PaceLabel.text(deltaPercent: -42, bundle: en) == "42% buffer")
     #expect(PaceLabel.text(deltaPercent: 0, bundle: en) == "on pace")
 }

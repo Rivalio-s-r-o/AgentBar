@@ -10,7 +10,7 @@
 "popover.updated" = "Aktualizováno %@";
 "popover.today" = "Dnes";
 "popover.today.detail" = "%@ tok (+%@ cache) ≈ %@";
-"popover.remaining" = "%lld%% zbývá";
+"popover.remaining" = "%lld %%";
 "popover.pace" = "Tempo: %@";
 "popover.month.compact" = "30 dní · %@ tok";
 "popover.computing" = "30 dní: počítám…";

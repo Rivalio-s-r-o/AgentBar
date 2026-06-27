@@ -5,9 +5,9 @@
 "reltime.hour" = "před %lld h";
 "reltime.day" = "před %lld d";
 
-"pace.ahead" = "napřed o %lld %%";
-"pace.behind" = "pozadu o %lld %%";
-"pace.onpace" = "v tempu";
+"pace.over" = "skluz %lld %%";
+"pace.buffer" = "rezerva %lld %%";
+"pace.onpace" = "rovnoměrné tempo";
 
 "reset.now" = "teď";
 

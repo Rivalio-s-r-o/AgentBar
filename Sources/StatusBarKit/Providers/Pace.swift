@@ -15,8 +15,8 @@ public enum PaceCalculator {
 public enum PaceLabel {
     public static func text(deltaPercent d: Int, bundle: Bundle? = nil) -> String {
         let b = bundle ?? .module
-        if d > 0 { return String(format: NSLocalizedString("pace.ahead", bundle: b, comment: "X % ahead"), d) }
-        if d < 0 { return String(format: NSLocalizedString("pace.behind", bundle: b, comment: "X % behind"), -d) }
+        if d > 0 { return String(format: NSLocalizedString("pace.over", bundle: b, comment: "X % over pace (consuming faster)"), d) }
+        if d < 0 { return String(format: NSLocalizedString("pace.buffer", bundle: b, comment: "X % buffer (consuming slower)"), -d) }
         return NSLocalizedString("pace.onpace", bundle: b, comment: "on pace")
     }
 }

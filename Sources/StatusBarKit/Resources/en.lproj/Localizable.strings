@@ -5,8 +5,8 @@
 "reltime.hour" = "%lld h ago";
 "reltime.day" = "%lld d ago";
 
-"pace.ahead" = "%lld%% ahead";
-"pace.behind" = "%lld%% behind";
+"pace.over" = "%lld%% over";
+"pace.buffer" = "%lld%% buffer";
 "pace.onpace" = "on pace";
 
 "reset.now" = "now";

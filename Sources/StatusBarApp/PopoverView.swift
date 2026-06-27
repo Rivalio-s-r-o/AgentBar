@@ -132,8 +132,11 @@ private struct ProviderCard: View {
                     Text(String(format: NSLocalizedString("popover.remaining", bundle: .module, comment: ""), max(0, 100 - Int((w.usedFraction*100).rounded()))))
                         .font(.system(size: 12, weight: .bold)).monospacedDigit()
                     if let r = w.resetAt {
-                        Text("· \(ResetFormatter.short(until: r, now: Date()))")
-                            .font(.system(size: 10.5)).foregroundStyle(.tertiary).monospacedDigit()
+                        HStack(spacing: 2) {
+                            Image(systemName: "clock").font(.system(size: 9)).accessibilityHidden(true)
+                            Text(ResetFormatter.short(until: r, now: Date()))
+                                .font(.system(size: 10.5)).monospacedDigit()
+                        }.foregroundStyle(.secondary)
                     }
                 }
                 TimelineBarView(bar: BurnBarBuilder.bar(forWindow: w, now: Date())).accessibilityHidden(true)
@@ -143,22 +146,18 @@ private struct ProviderCard: View {
         }
     }
 
+    /// 3. řádek okna = jediný nejdůležitější signál.
+    /// Hrozí-li vyčerpání limitu PŘED resetem → výstraha „limit ~za X" (červeně, neredundantní s barem).
+    /// Jinak tempo proti rovnoměrnému čerpání: rezerva (zeleně) / skluz (oranžově) / rovnoměrné (šedě).
+    /// Projekce „~X% left at reset" se NEvypisuje — kreslí ji bar (plná část + ryska).
     @ViewBuilder private func paceRow(_ w: UsageWindow) -> some View {
-        let pace = PaceCalculator.pace(window: w, now: Date())
-        let burn = BurnRateCalculator.project(window: w, now: Date())
-        let burnText = burn.map { BurnRateLabel.text($0) }
-        if pace != nil || burnText != nil {
-            HStack(spacing: 5) {
-                if let bt = burnText {
-                    Text(bt).font(.system(size: 10.5)).foregroundStyle(.secondary)
-                }
-                if let d = pace {
-                    if burnText != nil { Text("·").font(.system(size: 10.5)).foregroundStyle(.tertiary) }
-                    Text(PaceLabel.text(deltaPercent: d))
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(d > 0 ? Color.orange : (d < 0 ? Color.green : Color.secondary))
-                }
-            }
+        if let burn = BurnRateCalculator.project(window: w, now: Date()), burn.timeToExhaustion != nil {
+            Text(BurnRateLabel.text(burn))
+                .font(.system(size: 10.5, weight: .medium)).foregroundStyle(.red)
+        } else if let d = PaceCalculator.pace(window: w, now: Date()) {
+            Text(PaceLabel.text(deltaPercent: d))
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(d > 0 ? Color.orange : (d < 0 ? Color.green : Color.secondary))
         }
     }
 

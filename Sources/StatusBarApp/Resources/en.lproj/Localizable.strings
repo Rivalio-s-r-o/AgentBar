@@ -10,7 +10,7 @@
 "popover.updated" = "Updated %@";
 "popover.today" = "Today";
 "popover.today.detail" = "%@ tok (+%@ cache) ≈ %@";
-"popover.remaining" = "%lld%% left";
+"popover.remaining" = "%lld%%";
 "popover.pace" = "Pace: %@";
 "popover.month.compact" = "30 days · %@ tok";
 "popover.computing" = "30 days: computing…";
