@@ -70,8 +70,27 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         }
     }
     private func render(_ allUsages: [ProviderUsage]) {
-        // Volba uživatele: které providery lišta ukazuje (Oba/Claude/Codex).
-        let usages = allUsages.filter { prefs.barProviders.includes($0.providerId) }
+        // 0 připojených (vše ghost) → neutrální onboarding ikona místo dat.
+        let anyConnected = allUsages.contains {
+            !ProviderConnectivity.isGhost(status: $0.status,
+                                          isConfigured: ProviderConnectivity.isConfigured($0.providerId))
+        }
+        if !anyConnected && !allUsages.isEmpty {
+            let img = NSImage(systemSymbolName: "gauge.medium", accessibilityDescription: "AgentBar")
+            img?.isTemplate = true
+            statusItem.button?.attributedTitle = NSAttributedString(string: img == nil ? "AgentBar" : "")
+            statusItem.button?.image = img
+            let tip = NSLocalizedString("menubar.tooltip.empty", bundle: .module, comment: "")
+            statusItem.button?.toolTip = tip
+            statusItem.button?.setAccessibilityLabel(tip)
+            return
+        }
+        // Ghosty se v liště nikdy nezobrazí; pak teprve volba uživatele (Oba/Claude/Codex).
+        let connected = allUsages.filter {
+            !ProviderConnectivity.isGhost(status: $0.status,
+                                          isConfigured: ProviderConnectivity.isConfigured($0.providerId))
+        }
+        let usages = connected.filter { prefs.barProviders.includes($0.providerId) }
         if prefs.barStyle == .burnBar { renderBurnBar(usages); return }
         statusItem.button?.image = nil   // jiný styl → zruš případný obrázek
         let segs = MenuBarTitleBuilder.segments(for: usages,

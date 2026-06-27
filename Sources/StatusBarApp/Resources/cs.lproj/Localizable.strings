@@ -43,6 +43,7 @@
 "menubar.tooltip.ok" = "%@: %lld%% zbývá";
 "menubar.tooltip.degraded" = "%@: ⚠︎ %@";
 "menubar.tooltip.unavailable" = "%@: — %@";
+"menubar.tooltip.empty" = "AgentBar — připoj Claude Code nebo Codex";
 
 "window.settings.title" = "AgentBar — Nastavení";
 
