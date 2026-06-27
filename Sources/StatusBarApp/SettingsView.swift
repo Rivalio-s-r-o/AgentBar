@@ -37,8 +37,36 @@ struct SettingsView: View {
         return String(format: NSLocalizedString("settings.previewCaption", bundle: .module, comment: ""), barStyle.displayName, shows.lowercased())
     }
 
+    /// Řádek stavu připojení providera (Připojeno/Nepřipojeno) + návod, když chybí.
+    @ViewBuilder private func connectionRow(_ id: ProviderID, name: String, howtoKey: String) -> some View {
+        let configured = ProviderConnectivity.isConfigured(id)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 8) {
+                ProviderBadge(providerId: id, size: 18)
+                Text(name).font(.system(size: 12.5))
+                Spacer()
+                Text(String(localized: configured ? "settings.connected" : "settings.notconnected", bundle: .module))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(configured ? Color.green : Color.secondary)
+            }
+            if !configured {
+                Text(String(localized: String.LocalizationValue(howtoKey), bundle: .module))
+                    .font(.system(size: 10.5)).foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 3)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 13) {
+
+            // Připojení providerů (onboarding)
+            SettingsSection(String(localized: "settings.connections", bundle: .module)) {
+                connectionRow(.claudeCode, name: "Claude Code", howtoKey: "settings.connect.claude")
+                rowDivider
+                connectionRow(.codex, name: "Codex", howtoKey: "settings.connect.codex")
+            }
 
             // Náhled v menu baru
             SettingsSection(String(localized: "settings.preview", bundle: .module)) {

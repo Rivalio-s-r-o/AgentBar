@@ -34,6 +34,11 @@
 "settings.percent" = "%lld %%";
 "settings.version" = "AgentBar %@";
 "settings.about" = "O aplikaci AgentBar…";
+"settings.connections" = "Připojení";
+"settings.connected" = "Připojeno";
+"settings.notconnected" = "Nepřipojeno";
+"settings.connect.claude" = "Nainstaluj Claude Code, přihlas se a spusť /usage.";
+"settings.connect.codex" = "Nainstaluj Codex CLI a spusť `codex` (jednou se přihlas).";
 
 "notif.title" = "%@ — %@";
 "notif.body" = "Zbývá %lld%%";
