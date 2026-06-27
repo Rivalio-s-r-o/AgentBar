@@ -54,3 +54,8 @@
 "settings.update.upToDate" = "Nejnovější verze (%@)";
 "settings.update.available" = "Nová verze %@ je k dispozici";
 "settings.update.unknown" = "Nelze ověřit";
+
+"provider.notconnected" = "nepřipojeno";
+"provider.connect" = "Připojit";
+"popover.welcome.title" = "Vítej v AgentBaru";
+"popover.welcome.body" = "Sleduje spotřebu Claude Code a Codexu. Připoj nástroj přihlášením do jeho CLI:";

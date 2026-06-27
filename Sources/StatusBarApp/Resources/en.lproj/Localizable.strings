@@ -54,3 +54,8 @@
 "settings.update.upToDate" = "Latest version (%@)";
 "settings.update.available" = "New version %@ available";
 "settings.update.unknown" = "Couldn't check";
+
+"provider.notconnected" = "not connected";
+"provider.connect" = "Connect";
+"popover.welcome.title" = "Welcome to AgentBar";
+"popover.welcome.body" = "Tracks Claude Code & Codex usage. Connect a tool by signing in to its CLI:";
