@@ -12,7 +12,7 @@ enum AppVersion {
 /// Privátní repo / chyba sítě → nil (graceful). `releases/latest` vynechává drafty i prereleases.
 struct GitHubReleaseChecker {
     let owner = "Rivalio-s-r-o"
-    let repo = "StatusBar"
+    let repo = "AgentBar"
     func fetchLatest() async -> (tag: String, url: String)? {
         guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/releases/latest") else { return nil }
         var req = URLRequest(url: url)

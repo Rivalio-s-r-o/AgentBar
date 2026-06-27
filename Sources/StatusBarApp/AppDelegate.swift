@@ -44,7 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showAbout() {
         NSApp.activate()
         let credits = NSAttributedString(
-            string: "github.com/Rivalio-s-r-o/StatusBar",
+            string: "github.com/Rivalio-s-r-o/AgentBar",
             attributes: [.foregroundColor: NSColor.secondaryLabelColor])
         let version = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
         NSApp.orderFrontStandardAboutPanel(options: [
