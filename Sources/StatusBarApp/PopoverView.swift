@@ -14,6 +14,12 @@ struct PopoverView: View {
         store.orderedUsages.compactMap { $0.today?.estimatedCost }.reduce(Decimal(0), +)
     }
 
+    /// Provider bez dat ANI footprintu (nepřipojený) → ghost řádek místo chybové karty.
+    private func isGhost(_ u: ProviderUsage) -> Bool {
+        ProviderConnectivity.isGhost(status: u.status,
+                                     isConfigured: ProviderConnectivity.isConfigured(u.providerId))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -46,11 +52,21 @@ struct PopoverView: View {
                 Divider()
                 Text(String(localized: "popover.loading", bundle: .module)).foregroundStyle(.secondary).padding(16)
             } else {
-                ForEach(store.orderedUsages, id: \.providerId) {
+                let connected = store.orderedUsages.filter { !isGhost($0) }
+                let ghosts = store.orderedUsages.filter { isGhost($0) }
+                if connected.isEmpty {
                     Divider()
-                    ProviderCard(usage: $0,
-                                 period: costHistory.history[$0.providerId],
+                    WelcomeView()
+                }
+                ForEach(connected, id: \.providerId) { u in
+                    Divider()
+                    ProviderCard(usage: u,
+                                 period: costHistory.history[u.providerId],
                                  isComputingPeriod: costHistory.isComputing)
+                }
+                ForEach(ghosts, id: \.providerId) { u in
+                    Divider()
+                    GhostRow(providerId: u.providerId, displayName: u.displayName, onConnect: onOpenSettings)
                 }
             }
             Divider()
