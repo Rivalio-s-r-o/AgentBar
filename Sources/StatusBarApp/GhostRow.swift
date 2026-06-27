@@ -18,6 +18,6 @@ struct GhostRow: View {
                 .buttonStyle(.plain).font(.system(size: 11, weight: .medium)).foregroundStyle(.tint)
         }
         .padding(.horizontal, 14).padding(.vertical, 7)
-        .accessibilityElement(children: .combine)
+        // Bez .combine — tlačítko „Připojit" musí zůstat pro VoiceOver samostatně akční.
     }
 }
