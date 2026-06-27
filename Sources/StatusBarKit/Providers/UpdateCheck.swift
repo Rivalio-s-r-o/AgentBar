@@ -40,7 +40,7 @@ public enum UpdateChecker {
     public static func evaluate(current: SemanticVersion, latestTag: String?, latestURL: String?) -> UpdateStatus {
         guard let tag = latestTag, let latest = SemanticVersion.parse(tag) else { return .unknown }
         if latest > current {
-            return .updateAvailable(version: latest, url: latestURL ?? "https://github.com/Rivalio-s-r-o/StatusBar/releases")
+            return .updateAvailable(version: latest, url: latestURL ?? "https://github.com/Rivalio-s-r-o/AgentBar/releases")
         }
         return .upToDate(current)
     }
