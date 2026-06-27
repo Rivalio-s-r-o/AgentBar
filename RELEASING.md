@@ -1,20 +1,22 @@
-# Vydávání nové verze StatusBar
+# Releasing AgentBar
 
-In-app kontrola aktualizací (Nastavení → Aktualizace) porovnává verzi běžící app
-s nejnovějším GitHub Release. Aby se „Nová verze dostupná" zobrazila:
+The in-app update check (Settings → Updates) compares the running app version
+with the latest GitHub Release. To make "New version available" appear:
 
-1. Bump verze v `Resources/Info.plist` (`CFBundleShortVersionString` + `CFBundleVersion`).
-2. Commit, tag `vX.Y.Z`, push tagu:
+1. Bump the version in `Resources/Info.plist` (`CFBundleShortVersionString` +
+   `CFBundleVersion`).
+2. Commit, tag, and push the tag:
    ```
-   git tag v0.10.0 && git push origin v0.10.0
+   git tag vX.Y.Z && git push origin vX.Y.Z
    ```
-3. Vytvořit GitHub Release z tagu (volitelně přiložit zazipovanou `.app`):
+3. Create a GitHub Release from the tag:
    ```
-   gh release create v0.10.0 --title "v0.10.0" --notes "…"
+   gh release create vX.Y.Z --title "AgentBar vX.Y.Z" --notes "…"
    ```
-4. **Repo musí být veřejné.** Anonymní `api.github.com/repos/Rivalio-s-r-o/StatusBar/releases/latest`
-   u privátního repa vrací 404 → in-app check tiše hlásí „Nelze ověřit / aktuální".
-   Dokud je repo privátní, je updater připravený, ale „neviditelný".
+4. **The repository must be public.** For a private repo the anonymous
+   `api.github.com/repos/Rivalio-s-r-o/AgentBar/releases/latest` returns 404,
+   so the in-app check silently reports "up to date / couldn't check".
 
-Updater je **notify-only**: otevře release stránku v prohlížeči. Neinstaluje automaticky
-(app je ad-hoc podepsaná). Uživatel stáhne/přebuilduje ručně.
+The updater is **notify-only**: it opens the release page in the browser. It
+does not auto-install (the app is self-signed). Users download / rebuild
+manually.
