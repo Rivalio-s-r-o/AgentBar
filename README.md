@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Resources/AppIcon/AppIcon-1024.png" width="120" alt="AgentBar icon">
+</p>
+
 # AgentBar
 
 > Native macOS menu bar app that tracks your Claude Code & Codex usage and limits — at a glance.
@@ -87,6 +91,36 @@ AgentBar is intentionally minimal about what it touches:
   store (Keychain / `auth.json`), guarded by round-trip validation and written
   atomically — the same thing the CLIs themselves do.
 
+## macOS permissions
+
+AgentBar asks for as little as possible. Here's what it may request, and why:
+
+**Keychain (Claude only).** To fetch your live Claude limits, AgentBar reads the
+Claude Code OAuth token from your login Keychain (the `Claude Code-credentials`
+item that Claude Code created). The first time, macOS shows a Keychain prompt —
+click **Always Allow** so it doesn't ask again.
+
+- Build with `./scripts/setup-signing.sh` first so "Always Allow" survives
+  rebuilds. (With an ad-hoc signature the prompt returns after every rebuild.)
+- Running `/login` in Claude Code rewrites that item and resets its access list,
+  so expect the prompt once more after each re-login. That's normal.
+- Codex needs **no** Keychain access — its token is a plain file
+  (`~/.codex/auth.json`).
+
+**Notifications (optional).** Only if you enable low-limit alerts
+(Settings → Alerts). Revoke anytime in System Settings → Notifications.
+
+**Login item (optional).** Only if you enable "Launch at login"; adds AgentBar
+to System Settings → General → Login Items.
+
+**What it does _not_ need:**
+
+- **No Full Disk Access** — it only reads `~/.claude` and `~/.codex`, dotfiles in
+  your home folder (not TCC-protected locations like Documents or Desktop).
+- **No Gatekeeper "unidentified developer" warning** — because you build the app
+  yourself, macOS doesn't quarantine it.
+- No accessibility, screen-recording, camera, or microphone access.
+
 ## Settings
 
 Open the popover → **Settings…**:
@@ -98,6 +132,17 @@ Open the popover → **Settings…**:
 - **Appearance** — System / Light / Dark.
 - **Alerts** — opt-in low-limit notifications and threshold.
 - **Updates** — automatic check against the latest GitHub release (notify-only).
+
+## Troubleshooting
+
+- **The menu bar shows a neutral gauge icon / "not connected":** run and sign in
+  to Claude Code (then `/usage`) and/or Codex (`codex`) — AgentBar reads their
+  data.
+- **macOS keeps asking for the Keychain:** click *Always Allow*; build via
+  `./scripts/setup-signing.sh` so it persists across rebuilds; avoid unnecessary
+  `/login` in Claude Code.
+- **"Data is N minutes old":** AgentBar throttles live requests and backs off
+  after rate limits — it refreshes shortly on its own.
 
 ## Contributing
 
